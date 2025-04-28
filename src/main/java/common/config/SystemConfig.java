@@ -25,7 +25,6 @@ public class SystemConfig {
     private static final int DEFAULT_HTTP_PORT = 8080;
     private static final int DEFAULT_TCP_PORT = 8081;
     private static final int DEFAULT_UDP_PORT = 8082;
-    private static final int DEFAULT_GRPC_PORT = 8083;
     private static final int DEFAULT_REGISTRATION_PORT = 8000;
     
     /**
@@ -58,20 +57,17 @@ public class SystemConfig {
         properties.setProperty("gateway.http.port", String.valueOf(DEFAULT_HTTP_PORT));
         properties.setProperty("gateway.tcp.port", String.valueOf(DEFAULT_TCP_PORT));
         properties.setProperty("gateway.udp.port", String.valueOf(DEFAULT_UDP_PORT));
-        properties.setProperty("gateway.grpc.port", String.valueOf(DEFAULT_GRPC_PORT));
         properties.setProperty("gateway.registration.port", String.valueOf(DEFAULT_REGISTRATION_PORT));
         
         // Configuração do Componente A
         properties.setProperty("componentA.http.port", "8181");
         properties.setProperty("componentA.tcp.port", "8182");
         properties.setProperty("componentA.udp.port", "8183");
-        properties.setProperty("componentA.grpc.port", "8184");
         
         // Configuração do Componente B
         properties.setProperty("componentB.http.port", "8281");
         properties.setProperty("componentB.tcp.port", "8282");
         properties.setProperty("componentB.udp.port", "8283");
-        properties.setProperty("componentB.grpc.port", "8284");
         
         // Configuração de Heartbeat
         properties.setProperty("heartbeat.interval.ms", "5000");
@@ -173,15 +169,6 @@ public class SystemConfig {
     }
     
     /**
-     * Obtém a porta gRPC do Gateway de API.
-     * 
-     * @return Porta gRPC do Gateway de API
-     */
-    public int getGrpcPort() {
-        return getIntProperty("gateway.grpc.port", DEFAULT_GRPC_PORT);
-    }
-    
-    /**
      * Obtém a porta de registro do Gateway de API.
      * 
      * @return Porta de registro do Gateway de API
@@ -218,15 +205,6 @@ public class SystemConfig {
     }
     
     /**
-     * Obtém a porta gRPC do Componente A.
-     * 
-     * @return Porta gRPC do Componente A
-     */
-    public int getComponentAGrpcPort() {
-        return getIntProperty("componentA.grpc.port", 8184);
-    }
-    
-    /**
      * Obtém a porta HTTP do Componente B.
      * 
      * @return Porta HTTP do Componente B
@@ -251,15 +229,6 @@ public class SystemConfig {
      */
     public int getComponentBUdpPort() {
         return getIntProperty("componentB.udp.port", 8283);
-    }
-    
-    /**
-     * Obtém a porta gRPC do Componente B.
-     * 
-     * @return Porta gRPC do Componente B
-     */
-    public int getComponentBGrpcPort() {
-        return getIntProperty("componentB.grpc.port", 8284);
     }
     
     /**

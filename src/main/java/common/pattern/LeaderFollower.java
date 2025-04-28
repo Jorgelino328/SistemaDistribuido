@@ -73,31 +73,16 @@ public class LeaderFollower {
         this.port = port;
     }
     
-    /**
-     * Define o callback para quando o status de liderança mudar.
-     * 
-     * @param onLeadershipChanged Função de callback com parâmetro booleano (true se tornou líder)
-     * @return Esta instância de LeaderFollower para encadeamento de métodos
-     */
     public LeaderFollower onLeadershipChanged(Consumer<Boolean> onLeadershipChanged) {
         this.onLeadershipChanged = onLeadershipChanged;
         return this;
     }
     
-    /**
-     * Define o callback para quando atualizações de estado forem recebidas (para seguidores).
-     * 
-     * @param onStateUpdate Função de callback com o estado como parâmetro
-     * @return Esta instância de LeaderFollower para encadeamento de métodos
-     */
     public LeaderFollower onStateUpdate(Consumer<String> onStateUpdate) {
         this.onStateUpdate = onStateUpdate;
         return this;
     }
     
-    /**
-     * Inicia a implementação do padrão Líder-Seguidor.
-     */
     public void start() {
         if (running) {
             return;
@@ -106,13 +91,9 @@ public class LeaderFollower {
         running = true;
         
         try {
-            // Cria o socket do servidor
             serverSocket = new ServerSocket(port);
-            
-            // Inicia o manipulador de mensagens
             startMessageHandler();
             
-            // Junta-se ao cluster ou inicia como líder
             if (leaderHost != null && leaderPort > 0) {
                 joinCluster();
             } else {
@@ -126,9 +107,6 @@ public class LeaderFollower {
         }
     }
     
-    /**
-     * Para a implementação do padrão Líder-Seguidor.
-     */
     public void stop() {
         if (!running) {
             return;
@@ -136,7 +114,6 @@ public class LeaderFollower {
         
         running = false;
         
-        // Encerra o agendador
         scheduler.shutdown();
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -147,7 +124,6 @@ public class LeaderFollower {
             Thread.currentThread().interrupt();
         }
         
-        // Fecha o socket do servidor
         if (serverSocket != null && !serverSocket.isClosed()) {
             try {
                 serverSocket.close();
@@ -159,14 +135,6 @@ public class LeaderFollower {
         LOGGER.info(componentType + " parou o padrão Líder-Seguidor");
     }
     
-    /**
-     * Define as informações do líder conhecido para se juntar a um cluster.
-     * 
-     * @param leaderId Identificador do líder
-     * @param leaderHost Host do líder
-     * @param leaderPort Porta do líder
-     * @return Esta instância de LeaderFollower para encadeamento de métodos
-     */
     public LeaderFollower setLeader(String leaderId, String leaderHost, int leaderPort) {
         this.leaderId = leaderId;
         this.leaderHost = leaderHost;
@@ -174,48 +142,22 @@ public class LeaderFollower {
         return this;
     }
     
-    /**
-     * Verifica se este nó é o líder.
-     * 
-     * @return true se for líder, false caso contrário
-     */
     public boolean isLeader() {
         return isLeader.get();
     }
     
-    /**
-     * Obtém o número do termo atual.
-     * 
-     * @return Termo atual
-     */
     public int getTerm() {
         return term.get();
     }
     
-    /**
-     * Obtém o ID do líder.
-     * 
-     * @return ID do líder
-     */
     public String getLeaderId() {
         return leaderId;
     }
     
-    /**
-     * Obtém o estado atual.
-     * 
-     * @return Estado atual
-     */
     public String getCurrentState() {
         return currentState;
     }
     
-    /**
-     * Atualiza o estado (só pode ser chamado pelo líder).
-     * 
-     * @param newState Novo estado
-     * @throws IllegalStateException Se não for o líder
-     */
     public void updateState(String newState) {
         if (!isLeader.get()) {
             throw new IllegalStateException("Somente o líder pode atualizar o estado");
@@ -223,14 +165,9 @@ public class LeaderFollower {
         
         currentState = newState;
         stateVersion.incrementAndGet();
-        
-        // Agenda replicação imediata do estado
         replicateState();
     }
     
-    /**
-     * Inicia o manipulador de mensagens para processar mensagens recebidas.
-     */
     private void startMessageHandler() {
         Thread handlerThread = new Thread(() -> {
             while (running) {
@@ -249,11 +186,6 @@ public class LeaderFollower {
         handlerThread.start();
     }
     
-    /**
-     * Manipula uma conexão recebida.
-     * 
-     * @param socket Socket do cliente
-     */
     private void handleConnection(Socket socket) {
         new Thread(() -> {
             try (
@@ -292,15 +224,8 @@ public class LeaderFollower {
         }).start();
     }
     
-    /**
-     * Manipula uma solicitação de entrada de um seguidor.
-     * 
-     * @param parts Partes da mensagem
-     * @param writer Escritor para resposta
-     */
     private void handleJoinRequest(String[] parts, PrintWriter writer) {
         if (!isLeader.get()) {
-            // Redireciona para o líder
             writer.println("REDIRECT|" + leaderId + "|" + leaderHost + "|" + leaderPort);
             return;
         }
@@ -310,15 +235,11 @@ public class LeaderFollower {
             String followerHost = parts[2];
             int followerPort = Integer.parseInt(parts[3]);
             
-            // Cria informações do componente para o seguidor
             ComponentInfo follower = new ComponentInfo(
-                componentType, followerHost, 0, 0, 0, followerPort
+                componentType, followerHost, Integer.parseInt(followerId), 0, followerPort
             );
             
-            // Adiciona à lista de seguidores
             followers.add(follower);
-            
-            // Envia estado atual e termo
             writer.println("WELCOME|" + term.get() + "|" + stateVersion.get() + "|" + currentState);
             
             LOGGER.info("Seguidor entrou: " + followerId + " em " + followerHost + ":" + followerPort);
@@ -326,15 +247,9 @@ public class LeaderFollower {
             writer.println("ERROR|Formato inválido de mensagem JOIN");
         }
     }
-    
-    /**
-     * Manipula uma mensagem de atualização de estado.
-     * 
-     * @param parts Partes da mensagem
-     */
+
     private void handleStateUpdate(String[] parts) {
         if (isLeader.get()) {
-            // Líderes não aceitam atualizações de estado
             return;
         }
         
@@ -343,16 +258,13 @@ public class LeaderFollower {
             int messageStateVersion = Integer.parseInt(parts[2]);
             String state = parts[3];
             
-            // Verifica se a mensagem é do termo atual
             if (messageTerm >= term.get()) {
                 term.set(messageTerm);
                 
-                // Atualiza o estado se for uma versão mais recente
                 if (messageStateVersion > stateVersion.get()) {
                     stateVersion.set(messageStateVersion);
                     currentState = state;
                     
-                    // Notifica atualização de estado
                     if (onStateUpdate != null) {
                         onStateUpdate.accept(currentState);
                     }
@@ -361,24 +273,16 @@ public class LeaderFollower {
         }
     }
     
-    /**
-     * Manipula uma mensagem de eleição.
-     * 
-     * @param parts Partes da mensagem
-     * @param writer Escritor para resposta
-     */
     private void handleElectionMessage(String[] parts, PrintWriter writer) {
         if (parts.length >= 3) {
             int electionTerm = Integer.parseInt(parts[1]);
             String candidateId = parts[2];
             
             if (electionTerm > term.get()) {
-                // Aceita o novo líder
                 term.set(electionTerm);
                 leaderId = candidateId;
                 isLeader.set(false);
                 
-                // Notifica mudança de liderança
                 if (onLeadershipChanged != null) {
                     onLeadershipChanged.accept(false);
                 }
@@ -386,25 +290,18 @@ public class LeaderFollower {
                 writer.println("VOTE|" + electionTerm + "|" + componentId + "|YES");
                 LOGGER.info("Votou em " + candidateId + " no termo " + electionTerm);
             } else {
-                // Rejeita o candidato
                 writer.println("VOTE|" + term.get() + "|" + componentId + "|NO");
             }
         }
     }
     
-    /**
-     * Junta-se a um cluster existente como seguidor.
-     */
     private void joinCluster() {
         try (
             Socket socket = new Socket(leaderHost, leaderPort);
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
         ) {
-            // Envia solicitação de entrada
             writer.println("JOIN|" + componentId + "|" + host + "|" + port);
-            
-            // Lê a resposta
             String response = reader.readLine();
             
             if (response != null) {
@@ -412,7 +309,6 @@ public class LeaderFollower {
                 String command = parts[0];
                 
                 if ("WELCOME".equals(command) && parts.length >= 4) {
-                    // Entrou com sucesso como seguidor
                     int newTerm = Integer.parseInt(parts[1]);
                     int newStateVersion = Integer.parseInt(parts[2]);
                     String newState = parts[3];
@@ -422,61 +318,41 @@ public class LeaderFollower {
                     currentState = newState;
                     isLeader.set(false);
                     
-                    // Notifica status de liderança
                     if (onLeadershipChanged != null) {
                         onLeadershipChanged.accept(false);
                     }
                     
-                    // Notifica atualização de estado
                     if (onStateUpdate != null) {
                         onStateUpdate.accept(currentState);
                     }
                     
                     LOGGER.info("Entrou no cluster como seguidor. Líder: " + leaderId);
                 } else if ("REDIRECT".equals(command) && parts.length >= 4) {
-                    // Redirecionado para outro líder
                     leaderId = parts[1];
                     leaderHost = parts[2];
                     leaderPort = Integer.parseInt(parts[3]);
-                    
-                    // Tenta entrar novamente com o novo líder
                     joinCluster();
                 } else {
                     LOGGER.warning("Falha ao entrar no cluster. Resposta: " + response);
-                    
-                    // Inicia uma eleição
                     startElection();
                 }
             }
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Erro ao entrar no cluster", e);
-            
-            // Inicia uma eleição
             startElection();
         }
     }
     
-    /**
-     * Inicia uma eleição para se tornar o líder.
-     */
     private void startElection() {
-        // Incrementa o termo e vota em si mesmo
         int newTerm = term.incrementAndGet();
         LOGGER.info("Iniciando eleição para o termo " + newTerm);
-        
-        // Em uma implementação real, contataria todos os outros nós
-        // Para esta versão simplificada, apenas torna-se líder
         becomeLeader();
     }
     
-    /**
-     * Torna-se o líder do cluster.
-     */
     private void becomeLeader() {
         isLeader.set(true);
         leaderId = componentId;
         
-        // Inicia replicação de estado
         scheduler.scheduleAtFixedRate(
             this::replicateState,
             stateReplicationIntervalMs,
@@ -484,7 +360,6 @@ public class LeaderFollower {
             TimeUnit.MILLISECONDS
         );
         
-        // Notifica mudança de liderança
         if (onLeadershipChanged != null) {
             onLeadershipChanged.accept(true);
         }
@@ -492,9 +367,6 @@ public class LeaderFollower {
         LOGGER.info("Tornou-se líder para o termo " + term.get());
     }
     
-    /**
-     * Replica o estado para todos os seguidores (somente líder).
-     */
     private void replicateState() {
         if (!isLeader.get() || followers.isEmpty()) {
             return;
@@ -502,56 +374,31 @@ public class LeaderFollower {
         
         String stateMessage = "STATE|" + term.get() + "|" + stateVersion.get() + "|" + currentState;
         
-        // Envia estado para todos os seguidores
         synchronized (followers) {
             List<ComponentInfo> deadFollowers = new ArrayList<>();
             
             for (ComponentInfo follower : followers) {
                 try (
-                    Socket socket = new Socket(follower.getHost(), follower.getGrpcPort());
+                    Socket socket = new Socket(follower.getHost(), follower.getUdpPort());
                     PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)
                 ) {
                     writer.println(stateMessage);
                 } catch (IOException e) {
                     LOGGER.log(Level.WARNING, "Falha ao replicar estado para seguidor em " + 
-                              follower.getHost() + ":" + follower.getGrpcPort(), e);
-                    
-                    // Marca seguidor para remoção
+                              follower.getHost() + ":" + follower.getUdpPort(), e);
                     deadFollowers.add(follower);
                 }
             }
             
-            // Remove seguidores inativos
             followers.removeAll(deadFollowers);
         }
     }
     
-    /**
-     * Cria uma instância de LeaderFollower configurada para iniciar como líder.
-     * 
-     * @param componentType Tipo do componente
-     * @param componentId ID do componente
-     * @param host Endereço do host
-     * @param port Porta para comunicação líder-seguidor
-     * @return Instância configurada de LeaderFollower
-     */
     public static LeaderFollower createLeader(String componentType, String componentId, 
                                              String host, int port) {
         return new LeaderFollower(componentType, componentId, host, port);
     }
     
-    /**
-     * Cria uma instância de LeaderFollower configurada para se juntar a um cluster existente.
-     * 
-     * @param componentType Tipo do componente
-     * @param componentId ID do componente
-     * @param host Endereço do host
-     * @param port Porta para comunicação líder-seguidor
-     * @param leaderId ID do líder
-     * @param leaderHost Endereço do host do líder
-     * @param leaderPort Porta do líder
-     * @return Instância configurada de LeaderFollower
-     */
     public static LeaderFollower createFollower(String componentType, String componentId, 
                                               String host, int port, String leaderId,
                                               String leaderHost, int leaderPort) {

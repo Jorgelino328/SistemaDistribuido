@@ -1,5 +1,3 @@
-
-
 import common.config.SystemConfig;
 import component.ComponentA;
 import component.ComponentB;
@@ -74,12 +72,11 @@ public class Main {
         int httpPort = config.getComponentAHttpPort();
         int tcpPort = config.getComponentATcpPort();
         int udpPort = config.getComponentAUdpPort();
-        int grpcPort = config.getComponentAGrpcPort();
         String gatewayHost = config.getGatewayHost();
         int gatewayRegistrationPort = config.getRegistrationPort();
         
         ComponentA component = new ComponentA(
-            host, httpPort, tcpPort, udpPort, grpcPort, gatewayHost, gatewayRegistrationPort
+            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
         
@@ -101,12 +98,11 @@ public class Main {
         int httpPort = config.getComponentBHttpPort();
         int tcpPort = config.getComponentBTcpPort();
         int udpPort = config.getComponentBUdpPort();
-        int grpcPort = config.getComponentBGrpcPort();
         String gatewayHost = config.getGatewayHost();
         int gatewayRegistrationPort = config.getRegistrationPort();
         
         ComponentB component = new ComponentB(
-            host, httpPort, tcpPort, udpPort, grpcPort, gatewayHost, gatewayRegistrationPort
+            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
         

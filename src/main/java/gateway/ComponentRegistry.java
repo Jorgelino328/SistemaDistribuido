@@ -57,20 +57,19 @@ public class ComponentRegistry {
             
             if (registrationMessage != null && !registrationMessage.isEmpty()) {
                 // Analisa a mensagem de registro
-                // Formato esperado: "REGISTER|componentType|host|httpPort|tcpPort|udpPort|grpcPort"
+                // Formato esperado: "REGISTER|componentType|host|httpPort|tcpPort|udpPort"
                 String[] parts = registrationMessage.split("\\|");
                 
-                if (parts.length >= 7 && "REGISTER".equals(parts[0])) {
+                if (parts.length >= 6 && "REGISTER".equals(parts[0])) {
                     String componentType = parts[1].toLowerCase();
                     String host = parts[2];
                     int httpPort = Integer.parseInt(parts[3]);
                     int tcpPort = Integer.parseInt(parts[4]);
                     int udpPort = Integer.parseInt(parts[5]);
-                    int grpcPort = Integer.parseInt(parts[6]);
                     
                     // Cria as informações do componente
                     ComponentInfo componentInfo = new ComponentInfo(
-                        componentType, host, httpPort, tcpPort, udpPort, grpcPort
+                        componentType, host, httpPort, tcpPort, udpPort
                     );
                     
                     // Registra o componente
@@ -80,7 +79,7 @@ public class ComponentRegistry {
                     writer.println("REGISTERED|SUCCESS");
                     LOGGER.info("Registrado " + componentType + " em " + host + 
                                " (HTTP:" + httpPort + ", TCP:" + tcpPort + 
-                               ", UDP:" + udpPort + ", gRPC:" + grpcPort + ")");
+                               ", UDP:" + udpPort + ")");
                 } else {
                     writer.println("REGISTERED|FAILED|Formato de registro inválido");
                     LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);

@@ -29,9 +29,9 @@ public class ComponentA extends BaseComponent {
     /**
      * Construtor para o Componente A.
      */
-    public ComponentA(String host, int httpPort, int tcpPort, int udpPort, int grpcPort,
+    public ComponentA(String host, int httpPort, int tcpPort, int udpPort,
                       String gatewayHost, int gatewayRegistrationPort) {
-        super("componentA", host, httpPort, tcpPort, udpPort, grpcPort, 
+        super("componentA", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
         
         // Gera um ID único para a instância
@@ -250,7 +250,6 @@ public class ComponentA extends BaseComponent {
         int httpPort = 8081;
         int tcpPort = 8082;
         int udpPort = 8083;
-        int grpcPort = 8084;
         String gatewayHost = "localhost";
         int gatewayRegistrationPort = 8000;
         
@@ -260,14 +259,13 @@ public class ComponentA extends BaseComponent {
             httpPort = Integer.parseInt(args[1]);
             tcpPort = Integer.parseInt(args[2]);
             udpPort = Integer.parseInt(args[3]);
-            grpcPort = Integer.parseInt(args[4]);
             gatewayHost = args[5];
             gatewayRegistrationPort = Integer.parseInt(args[6]);
         }
         
         // Cria e inicia o componente
         ComponentA component = new ComponentA(
-            host, httpPort, tcpPort, udpPort, grpcPort, gatewayHost, gatewayRegistrationPort
+            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
         
@@ -275,6 +273,6 @@ public class ComponentA extends BaseComponent {
         Runtime.getRuntime().addShutdownHook(new Thread(component::stop));
         
         LOGGER.info("Componente A iniciado com as portas - HTTP: " + httpPort + 
-                   ", TCP: " + tcpPort + ", UDP: " + udpPort + ", gRPC: " + grpcPort);
+                   ", TCP: " + tcpPort + ", UDP: " + udpPort);
     }
 }

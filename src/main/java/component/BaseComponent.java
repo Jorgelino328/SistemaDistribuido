@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  * Fornece funcionalidades comuns, como:
  * - Registro no Gateway de API
  * - Respostas de heartbeat
- * - Manipuladores de protocolo para HTTP, TCP, UDP e gRPC
+ * - Manipuladores de protocolo para HTTP, TCP e UDP 
  */
 public abstract class BaseComponent {
     private static final Logger LOGGER = Logger.getLogger(BaseComponent.class.getName());
@@ -33,7 +33,6 @@ public abstract class BaseComponent {
     protected final int httpPort;
     protected final int tcpPort;
     protected final int udpPort;
-    protected final int grpcPort;
     
     // Informações do Gateway
     protected final String gatewayHost;
@@ -50,7 +49,6 @@ public abstract class BaseComponent {
     protected ServerSocket httpServer;
     protected ServerSocket tcpServer;
     protected DatagramSocket udpServer;
-    // Para o servidor gRPC, você usaria a classe Server do gRPC
     
     // Tamanho máximo do pacote UDP
     protected static final int MAX_UDP_PACKET_SIZE = 65507;
@@ -63,18 +61,16 @@ public abstract class BaseComponent {
      * @param httpPort Porta para comunicação HTTP
      * @param tcpPort Porta para comunicação TCP
      * @param udpPort Porta para comunicação UDP
-     * @param grpcPort Porta para comunicação gRPC
      * @param gatewayHost Endereço do host do Gateway de API
      * @param gatewayRegistrationPort Porta de registro do Gateway de API
      */
-    public BaseComponent(String componentType, String host, int httpPort, int tcpPort, int udpPort, int grpcPort,
+    public BaseComponent(String componentType, String host, int httpPort, int tcpPort, int udpPort,
                          String gatewayHost, int gatewayRegistrationPort) {
         this.componentType = componentType;
         this.host = host;
         this.httpPort = httpPort;
         this.tcpPort = tcpPort;
         this.udpPort = udpPort;
-        this.grpcPort = grpcPort;
         this.gatewayHost = gatewayHost;
         this.gatewayRegistrationPort = gatewayRegistrationPort;
         
@@ -100,7 +96,6 @@ public abstract class BaseComponent {
             startHTTPServer();
             startTCPServer();
             startUDPServer();
-            // startGRPCServer(); // Seria implementado para uma solução completa
             
             // Registra no Gateway de API
             registerWithGateway();
@@ -175,8 +170,8 @@ public abstract class BaseComponent {
         ) {
             // Envia a mensagem de registro
             String registrationMessage = String.format(
-                "REGISTER|%s|%s|%d|%d|%d|%d",
-                componentType, host, httpPort, tcpPort, udpPort, grpcPort
+                "REGISTER|%s|%s|%d|%d|%d",
+                componentType, host, httpPort, tcpPort, udpPort
             );
             
             writer.println(registrationMessage);
@@ -294,7 +289,6 @@ public abstract class BaseComponent {
     protected void startHeartbeatResponder() {
         // Para UDP, lidamos com heartbeats no servidor UDP
         
-        // Para heartbeats TCP, poderíamos iniciar um servidor dedicado
         scheduler.scheduleAtFixedRate(() -> {
             // Registra periodicamente para lidar com reinícios do gateway
             registerWithGateway();
@@ -336,6 +330,6 @@ public abstract class BaseComponent {
      * Obtém o objeto de informações do componente.
      */
     protected ComponentInfo getComponentInfo() {
-        return new ComponentInfo(componentType, host, httpPort, tcpPort, udpPort, grpcPort);
+        return new ComponentInfo(componentType, host, httpPort, tcpPort, udpPort);
     }
 }

@@ -25,7 +25,6 @@ public class APIGateway {
     private final gateway.protocol.HTTPHandler httpHandler;
     private final gateway.protocol.TCPHandler tcpHandler;
     private final gateway.protocol.UDPHandler udpHandler;
-    private final gateway.protocol.GRPCHandler grpcHandler;
     
     // Monitor de heartbeat
     private final HeartbeatMonitor heartbeatMonitor;
@@ -37,7 +36,6 @@ public class APIGateway {
     private final int httpPort;
     private final int tcpPort;
     private final int udpPort;
-    private final int grpcPort;
     private final int registrationPort;
     
     private boolean isRunning = false;
@@ -52,7 +50,6 @@ public class APIGateway {
         this.httpPort = config.getHttpPort();
         this.tcpPort = config.getTcpPort();
         this.udpPort = config.getUdpPort();
-        this.grpcPort = config.getGrpcPort();
         this.registrationPort = config.getRegistrationPort();
         
         // Inicializa os componentes
@@ -63,7 +60,6 @@ public class APIGateway {
         this.httpHandler = new gateway.protocol.HTTPHandler(this, httpPort);
         this.tcpHandler = new gateway.protocol.TCPHandler(this, tcpPort);
         this.udpHandler = new gateway.protocol.UDPHandler(this, udpPort);
-        this.grpcHandler = new gateway.protocol.GRPCHandler(this, grpcPort);
     }
 
     /**
@@ -85,7 +81,6 @@ public class APIGateway {
         httpHandler.start();
         tcpHandler.start();
         udpHandler.start();
-        grpcHandler.start();
         
         // Inicia o monitoramento de heartbeat
         heartbeatMonitor.start();
@@ -95,7 +90,6 @@ public class APIGateway {
         LOGGER.info("Servidor HTTP iniciado na porta " + httpPort);
         LOGGER.info("Servidor TCP iniciado na porta " + tcpPort);
         LOGGER.info("Servidor UDP iniciado na porta " + udpPort);
-        LOGGER.info("Servidor gRPC iniciado na porta " + grpcPort);
     }
     
     /**
@@ -138,7 +132,6 @@ public class APIGateway {
         httpHandler.stop();
         tcpHandler.stop();
         udpHandler.stop();
-        grpcHandler.stop();
         heartbeatMonitor.stop();
         
         // Encerra o agendador
@@ -160,7 +153,7 @@ public class APIGateway {
      * 
      * @param componentType Tipo do componente de destino
      * @param request Requisição em formato de bytes
-     * @param protocol Protocolo usado (http, tcp, udp, grpc)
+     * @param protocol Protocolo usado (http, tcp, udp)
      * @return Resposta do componente em formato de bytes
      */
     public byte[] routeRequest(String componentType, byte[] request, String protocol) {
@@ -191,8 +184,6 @@ public class APIGateway {
                     return tcpHandler.forwardRequest(selected, request);
                 case "udp":
                     return udpHandler.forwardRequest(selected, request);
-                case "grpc":
-                    return grpcHandler.forwardRequest(selected, request);
                 default:
                     LOGGER.warning("Protocolo não suportado: " + protocol);
                     return "Protocolo não suportado".getBytes();

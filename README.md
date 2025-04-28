@@ -24,24 +24,24 @@ mvn clean package
 ### Iniciando os Componentes
 1. Inicie o API Gateway primeiro:
 ```bash
-java -jar target/distributed-system-project-1.0-SNAPSHOT-jar-with-dependencies.jar gateway
+java -jar target/distribuida.jar gateway
 ```
 
 2. Inicie instâncias do ComponentA:
 ```bash
-java -jar target/distributed-system-project-1.0-SNAPSHOT-jar-with-dependencies.jar componenta
+java -jar target/distribuida.jar componenta
 ```
 
 3. Inicie instâncias do ComponentB:
 ```bash
-java -jar target/distributed-system-project-1.0-SNAPSHOT-jar-with-dependencies.jar componentb
+java -jar target/distribuida.jar componentb
 ```
 
 ### Configuração
 As configurações do sistema estão no arquivo `config.properties`. Para executar múltiplas instâncias de um componente, modifique as portas usando parâmetros de linha de comando:
 
 ```bash
-java -Dcomponenta.http.port=8191 -jar target/distributed-system-project-1.0-SNAPSHOT-jar-with-dependencies.jar componenta
+
 ```
 
 ## Protocolos Suportados
@@ -49,7 +49,6 @@ O sistema suporta os seguintes protocolos:
 - HTTP
 - TCP
 - UDP
-- gRPC
 
 ## Padrões Implementados
 - **Heartbeat**: Para monitoramento da disponibilidade dos componentes

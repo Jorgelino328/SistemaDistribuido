@@ -14,7 +14,6 @@ public class ComponentInfo {
     private final int httpPort;
     private final int tcpPort;
     private final int udpPort;
-    private final int grpcPort;
     
     // Status de saúde do componente
     private final AtomicBoolean healthy = new AtomicBoolean(true);
@@ -29,15 +28,13 @@ public class ComponentInfo {
      * @param httpPort Porta HTTP
      * @param tcpPort Porta TCP
      * @param udpPort Porta UDP
-     * @param grpcPort Porta gRPC
      */
-    public ComponentInfo(String type, String host, int httpPort, int tcpPort, int udpPort, int grpcPort) {
+    public ComponentInfo(String type, String host, int httpPort, int tcpPort, int udpPort) {
         this.type = type;
         this.host = host;
         this.httpPort = httpPort;
         this.tcpPort = tcpPort;
         this.udpPort = udpPort;
-        this.grpcPort = grpcPort;
     }
     
     /**
@@ -86,18 +83,9 @@ public class ComponentInfo {
     }
     
     /**
-     * Obtém a porta gRPC.
-     * 
-     * @return Porta gRPC
-     */
-    public int getGrpcPort() {
-        return grpcPort;
-    }
-    
-    /**
      * Obtém a porta para um protocolo específico.
      * 
-     * @param protocol Nome do protocolo (http, tcp, udp, grpc)
+     * @param protocol Nome do protocolo (http, tcp, udp)
      * @return Número da porta para o protocolo especificado
      * @throws IllegalArgumentException Se o protocolo não for suportado
      */
@@ -109,8 +97,6 @@ public class ComponentInfo {
                 return tcpPort;
             case "udp":
                 return udpPort;
-            case "grpc":
-                return grpcPort;
             default:
                 throw new IllegalArgumentException("Protocolo não suportado: " + protocol);
         }
@@ -183,14 +169,13 @@ public class ComponentInfo {
         return httpPort == that.httpPort &&
                tcpPort == that.tcpPort &&
                udpPort == that.udpPort &&
-               grpcPort == that.grpcPort &&
                Objects.equals(type, that.type) &&
                Objects.equals(host, that.host);
     }
     
     @Override
     public int hashCode() {
-        return Objects.hash(type, host, httpPort, tcpPort, udpPort, grpcPort);
+        return Objects.hash(type, host, httpPort, tcpPort, udpPort);
     }
     
     @Override
@@ -201,7 +186,6 @@ public class ComponentInfo {
                ", httpPort=" + httpPort +
                ", tcpPort=" + tcpPort +
                ", udpPort=" + udpPort +
-               ", grpcPort=" + grpcPort +
                ", healthy=" + healthy +
                ", suspect=" + suspect +
                '}';

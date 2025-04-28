@@ -29,9 +29,9 @@ public class ComponentB extends BaseComponent {
     /**
      * Construtor para o Componente B.
      */
-    public ComponentB(String host, int httpPort, int tcpPort, int udpPort, int grpcPort,
+    public ComponentB(String host, int httpPort, int tcpPort, int udpPort,
                       String gatewayHost, int gatewayRegistrationPort) {
-        super("componentB", host, httpPort, tcpPort, udpPort, grpcPort, 
+        super("componentB", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
         
         // Gera um ID único para a instância
@@ -240,24 +240,22 @@ public class ComponentB extends BaseComponent {
         int httpPort = 8091;
         int tcpPort = 8092;
         int udpPort = 8093;
-        int grpcPort = 8094;
         String gatewayHost = "localhost";
         int gatewayRegistrationPort = 8000;
         
         // Analisa argumentos da linha de comando, se fornecidos
-        if (args.length >= 7) {
+        if (args.length >= 6) {
             host = args[0];
             httpPort = Integer.parseInt(args[1]);
             tcpPort = Integer.parseInt(args[2]);
             udpPort = Integer.parseInt(args[3]);
-            grpcPort = Integer.parseInt(args[4]);
-            gatewayHost = args[5];
-            gatewayRegistrationPort = Integer.parseInt(args[6]);
+            gatewayHost = args[4];
+            gatewayRegistrationPort = Integer.parseInt(args[5]);
         }
         
         // Cria e inicia o componente
         ComponentB component = new ComponentB(
-            host, httpPort, tcpPort, udpPort, grpcPort, gatewayHost, gatewayRegistrationPort
+            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
         
@@ -265,6 +263,6 @@ public class ComponentB extends BaseComponent {
         Runtime.getRuntime().addShutdownHook(new Thread(component::stop));
         
         LOGGER.info("Componente B iniciado com as portas - HTTP: " + httpPort + 
-                   ", TCP: " + tcpPort + ", UDP: " + udpPort + ", gRPC: " + grpcPort);
+                   ", TCP: " + tcpPort + ", UDP: " + udpPort);
     }
 }

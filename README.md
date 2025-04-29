@@ -11,12 +11,6 @@ O sistema é composto por três componentes principais:
 
 ## Requisitos
 - Java 11 ou superior
-- Maven 3.6.0 ou superior
-- JMeter 5.5 ou superior (para testes de carga)
-
-## Como Executar
-
-### Compilando o Projeto
 ```bash
 mvn clean package
 ```
@@ -60,7 +54,6 @@ O sistema suporta os seguintes protocolos:
    - http_test.jmx
    - tcp_test.jmx
    - udp_test.jmx
-   - grpc_test.jmx
 
 2. Certifique-se de que todos os componentes estejam em execução antes de iniciar os testes.
 
@@ -75,3 +68,9 @@ O sistema implementa mecanismos de tolerância a falhas:
 ---
 
 Desenvolvido como parte do projeto acadêmico da disciplina de Sistemas Distribuídos na UFRN.
+- Maven 3.6.0 ou superior
+- JMeter 5.5 ou superior (para testes de carga)
+
+## Como Executar
+
+### Compilando o Projeto

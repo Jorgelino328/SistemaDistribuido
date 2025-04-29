@@ -1,6 +1,8 @@
 package component;
 
 import common.model.ComponentInfo;
+import common.pattern.HeartbeatPattern;
+import common.pattern.LeaderFollower;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,6 +12,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -40,6 +43,15 @@ public abstract class BaseComponent {
     
     // Estado
     protected boolean isRunning = false;
+    
+    // Identificador único da instância
+    protected final String instanceId;
+    
+    // Padrões de resiliência
+    protected HeartbeatPattern heartbeat;
+    protected LeaderFollower leaderFollower;
+    protected boolean isLeader = false;
+    protected int leaderPort; // Porta para comunicação leader-follower
     
     // Pools de threads
     protected final ExecutorService threadPool;
@@ -73,6 +85,8 @@ public abstract class BaseComponent {
         this.udpPort = udpPort;
         this.gatewayHost = gatewayHost;
         this.gatewayRegistrationPort = gatewayRegistrationPort;
+        this.instanceId = UUID.randomUUID().toString().substring(0, 8);
+        this.leaderPort = tcpPort + 1000; // Use TCP port + 1000 for leader communication
         
         // Inicializa os pools de threads
         this.threadPool = Executors.newFixedThreadPool(20);
@@ -84,11 +98,10 @@ public abstract class BaseComponent {
      */
     public void start() {
         if (isRunning) {
-            // LOGGER.warning(componentType + " já está em execução");
             return;
         }
         
-        // LOGGER.info("Iniciando " + componentType + "...");
+        // LOGGER.info("Iniciando " + componentType + " " + instanceId + "...");
         isRunning = true;
         
         try {
@@ -97,13 +110,16 @@ public abstract class BaseComponent {
             startTCPServer();
             startUDPServer();
             
+            // Inicia o heartbeat
+            initHeartbeat();
+            
+            // Inicia o padrão Leader-Follower
+            initLeaderFollower();
+            
             // Registra no Gateway de API
             registerWithGateway();
             
-            // Inicia o respondedor de heartbeat
-            startHeartbeatResponder();
-            
-            // LOGGER.info(componentType + " iniciado com sucesso");
+            // LOGGER.info(componentType + " " + instanceId + " iniciado com sucesso");
         } catch (Exception e) {
             // LOGGER.log(Level.SEVERE, "Falha ao iniciar " + componentType, e);
             stop();
@@ -118,7 +134,7 @@ public abstract class BaseComponent {
             return;
         }
         
-        // LOGGER.info("Parando " + componentType + "...");
+        // LOGGER.info("Parando " + componentType + " " + instanceId + "...");
         isRunning = false;
         
         try {
@@ -133,6 +149,15 @@ public abstract class BaseComponent {
             
             if (udpServer != null && !udpServer.isClosed()) {
                 udpServer.close();
+            }
+            
+            // Para os padrões
+            if (heartbeat != null) {
+                heartbeat.stop();
+            }
+            
+            if (leaderFollower != null) {
+                leaderFollower.stop();
             }
             
             // Para os pools de threads
@@ -153,7 +178,7 @@ public abstract class BaseComponent {
                 Thread.currentThread().interrupt();
             }
             
-            // LOGGER.info(componentType + " parado");
+            // LOGGER.info(componentType + " " + instanceId + " parado com sucesso");
         } catch (IOException e) {
             // LOGGER.log(Level.SEVERE, "Erro ao parar " + componentType, e);
         }
@@ -293,6 +318,98 @@ public abstract class BaseComponent {
             // Registra periodicamente para lidar com reinícios do gateway
             registerWithGateway();
         }, 60, 60, TimeUnit.SECONDS);
+    }
+    
+    /**
+     * Inicializa o padrão Heartbeat.
+     */
+    protected void initHeartbeat() {
+        heartbeat = HeartbeatPattern.createResponder(componentType, instanceId, host, udpPort);
+        heartbeat.start();
+        
+        // LOGGER.info("Heartbeat inicializado para " + componentType + " " + instanceId);
+    }
+    
+    /**
+     * Inicializa o padrão Leader-Follower.
+     */
+    protected void initLeaderFollower() {
+        // Por padrão, tenta se tornar líder
+        leaderFollower = LeaderFollower.createLeader(componentType, instanceId, host, leaderPort);
+        
+        // Configura callbacks
+        leaderFollower.onLeadershipChanged(this::handleLeadershipChange)
+                     .onStateUpdate(this::handleStateUpdate)
+                     .start();
+        
+        // LOGGER.info("Leader-Follower inicializado para " + componentType + " " + instanceId);
+    }
+    
+    /**
+     * Manipula mudanças de liderança.
+     * 
+     * @param isNowLeader true se este componente se tornou o líder, false caso contrário
+     */
+    protected void handleLeadershipChange(boolean isNowLeader) {
+        this.isLeader = isNowLeader;
+        if (isNowLeader) {
+            // LOGGER.info(componentType + " " + instanceId + " tornou-se líder");
+            onBecomeLeader();
+        } else {
+            // LOGGER.info(componentType + " " + instanceId + " tornou-se seguidor");
+            onBecomeFollower();
+        }
+    }
+    
+    /**
+     * Manipula atualizações de estado do líder.
+     * 
+     * @param stateData Dados de estado serializados
+     */
+    protected void handleStateUpdate(String stateData) {
+        if (!isLeader) {
+            // LOGGER.info(componentType + " " + instanceId + " recebeu atualização de estado");
+            processStateUpdate(stateData);
+        }
+    }
+    
+    /**
+     * Método chamado quando este componente se torna líder.
+     * Deve ser implementado pelas subclasses.
+     */
+    protected abstract void onBecomeLeader();
+    
+    /**
+     * Método chamado quando este componente se torna seguidor.
+     * Deve ser implementado pelas subclasses.
+     */
+    protected abstract void onBecomeFollower();
+    
+    /**
+     * Processa uma atualização de estado recebida do líder.
+     * Deve ser implementado pelas subclasses.
+     * 
+     * @param stateData Dados de estado serializados
+     */
+    protected abstract void processStateUpdate(String stateData);
+    
+    /**
+     * Gera uma representação de estado serializável.
+     * Deve ser implementado pelas subclasses.
+     * 
+     * @return Estado serializado como string
+     */
+    protected abstract String serializeState();
+    
+    /**
+     * Replica o estado atual para os seguidores (quando for líder).
+     */
+    protected void replicateState() {
+        if (isLeader && leaderFollower != null) {
+            String stateData = serializeState();
+            leaderFollower.updateState(stateData);
+            // LOGGER.info(componentType + " " + instanceId + " replicou estado para seguidores");
+        }
     }
     
     /**

@@ -9,22 +9,26 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import common.pattern.LeaderFollower;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Implementação do Componente B - simula um serviço simples de processamento de eventos.
+ * Implementação do Componente B - serviço de processamento de eventos com alta disponibilidade.
  */
 public class ComponentB extends BaseComponent {
     private static final Logger LOGGER = Logger.getLogger(ComponentB.class.getName());
     
-    // Armazenamento simples de eventos em memória
+    // Armazenamento de eventos em memória
     private final List<String> events = new CopyOnWriteArrayList<>();
-    
-    // Identificador da instância para fins de registro
-    private final String instanceId;
+    private final Gson gson = new Gson();
     
     /**
      * Construtor para o Componente B.
@@ -33,15 +37,51 @@ public class ComponentB extends BaseComponent {
                       String gatewayHost, int gatewayRegistrationPort) {
         super("componentB", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
-        
-        // Gera um ID único para a instância
-        this.instanceId = UUID.randomUUID().toString().substring(0, 8);
     }
     
     @Override
-    public void start() {
-        // LOGGER.info("Iniciando instância do Componente B " + instanceId + "...");
-        super.start();
+    protected void onBecomeLeader() {
+        // LOGGER.info("ComponentB[" + instanceId + "] tornou-se líder");
+        
+        // Adiciona evento registrando a nova liderança
+        String leaderEvent = System.currentTimeMillis() + ": LEADERSHIP_CHANGE - " + instanceId + " tornou-se líder";
+        events.add(leaderEvent);
+        
+        // Agenda replicação periódica de estado
+        scheduler.scheduleAtFixedRate(
+            this::replicateState,
+            1000, 5000, TimeUnit.MILLISECONDS
+        );
+    }
+    
+    @Override
+    protected void onBecomeFollower() {
+        // LOGGER.info("ComponentB[" + instanceId + "] tornou-se seguidor");
+        
+        // Adiciona evento registrando a mudança para seguidor
+        String followerEvent = System.currentTimeMillis() + ": LEADERSHIP_CHANGE - " + instanceId + " tornou-se seguidor";
+        events.add(followerEvent);
+    }
+    
+    @Override
+    protected String serializeState() {
+        return gson.toJson(events);
+    }
+    
+    @Override
+    protected void processStateUpdate(String stateData) {
+        try {
+            Type listType = new TypeToken<List<String>>(){}.getType();
+            List<String> leaderEvents = gson.fromJson(stateData, listType);
+            
+            // Atualiza os eventos locais com os do líder
+            events.clear();
+            events.addAll(leaderEvents);
+            
+            // LOGGER.info("ComponentB[" + instanceId + "] atualizou eventos do líder. Total: " + events.size());
+        } catch (Exception e) {
+            // LOGGER.log(Level.SEVERE, "Erro ao processar atualização de estado", e);
+        }
     }
     
     @Override
@@ -140,10 +180,22 @@ public class ComponentB extends BaseComponent {
                     case "ADD_EVENT":
                         if (parts.length >= 2) {
                             String eventData = parts[1];
-                            String timestamp = String.valueOf(System.currentTimeMillis());
-                            String event = timestamp + ": " + eventData;
-                            events.add(event);
-                            response = "SUCCESS|Evento adicionado com ID: " + (events.size() - 1);
+                            
+                            // Se for seguidor, redireciona para o líder
+                            if (!isLeader && leaderFollower != null && leaderFollower.getLeaderId() != null) {
+                                response = "REDIRECT|" + leaderFollower.getLeaderId() + "|" +
+                                           "Operação de escrita deve ser enviada ao líder";
+                            } else {
+                                String timestamp = String.valueOf(System.currentTimeMillis());
+                                String event = timestamp + ": " + eventData;
+                                events.add(event);
+                                response = "SUCCESS|Evento adicionado com ID: " + (events.size() - 1);
+                                
+                                // Se for líder, replica o estado para os seguidores
+                                if (isLeader) {
+                                    replicateState();
+                                }
+                            }
                         } else {
                             response = "ERROR|Formato ADD_EVENT inválido, esperado: ADD_EVENT|DATA";
                         }
@@ -160,7 +212,17 @@ public class ComponentB extends BaseComponent {
                         response = "COUNT|" + events.size();
                         break;
                     case "INFO":
-                        response = "INFO|Componente B|" + instanceId + "|" + events.size();
+                        response = "INFO|Componente B|" + instanceId + "|" + events.size() + "|" +
+                                   (isLeader ? "LEADER" : "FOLLOWER");
+                        break;
+                    case "LEADER":
+                        if (isLeader) {
+                            response = "LEADER|" + instanceId + "|" + host + "|" + leaderPort;
+                        } else if (leaderFollower != null && leaderFollower.getLeaderId() != null) {
+                            response = "LEADER|" + leaderFollower.getLeaderId();
+                        } else {
+                            response = "UNKNOWN_LEADER";
+                        }
                         break;
                     default:
                         response = "ERROR|Ação desconhecida: " + action;
@@ -232,7 +294,7 @@ public class ComponentB extends BaseComponent {
     }
     
     /**
-     * Método principal para executar o Componente B de forma independente.
+     * Método principal para executar o Componente B.
      */
     public static void main(String[] args) {
         // Valores padrão
@@ -253,16 +315,42 @@ public class ComponentB extends BaseComponent {
             gatewayRegistrationPort = Integer.parseInt(args[5]);
         }
         
-        // Cria e inicia o componente
-        ComponentB component = new ComponentB(
-            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
-        );
-        component.start();
+        // Para iniciar como seguidor, adicione parâmetros de liderança:
+        // java ComponentB host httpPort tcpPort udpPort gatewayHost gatewayPort leaderHost leaderPort
+        
+        if (args.length >= 9) {
+            // Código para iniciar como seguidor
+            String leaderHost = args[7];
+            int leaderLFPort = Integer.parseInt(args[8]);
+            
+            ComponentB follower = new ComponentB(
+                host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
+            );
+            
+            // Configure o componente como seguidor
+            follower.leaderFollower = LeaderFollower.createFollower(
+                "componentB", follower.instanceId, host, follower.leaderPort,
+                "leader-componentB", leaderHost, leaderLFPort
+            );
+            
+            follower.start();
+            
+            // LOGGER.info("ComponentB iniciado como seguidor, conectando-se ao líder em " + 
+            //            leaderHost + ":" + leaderLFPort);
+        } else {
+            // Código para iniciar normalmente (potencialmente como líder)
+            ComponentB component = new ComponentB(
+                host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
+            );
+            component.start();
+            
+            // LOGGER.info("ComponentB iniciado com as portas - HTTP: " + httpPort + 
+            //            ", TCP: " + tcpPort + ", UDP: " + udpPort);
+        }
         
         // Adiciona um hook para desligamento
-        Runtime.getRuntime().addShutdownHook(new Thread(component::stop));
-        
-        // LOGGER.info("Componente B iniciado com as portas - HTTP: " + httpPort + 
-        //            ", TCP: " + tcpPort + ", UDP: " + udpPort);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // Shutdown code
+        }));
     }
 }

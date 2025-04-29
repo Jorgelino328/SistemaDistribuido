@@ -11,18 +11,27 @@ import java.net.Socket;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import common.pattern.LeaderFollower;
 
 /**
- * Implementação do Componente A - simula um serviço simples de armazenamento chave-valor.
+ * Implementação do Componente A - serviço de armazenamento chave-valor com alta disponibilidade.
  */
 public class ComponentA extends BaseComponent {
     private static final Logger LOGGER = Logger.getLogger(ComponentA.class.getName());
     
     // Armazenamento chave-valor em memória
     private final Map<String, String> dataStore = new ConcurrentHashMap<>();
-    
+    private final Gson gson = new Gson();
+    private LeaderFollower leaderFollower;
+    private boolean isLeader = false;
+    private final int leaderPort = 9000;
+
     // Identificador da instância para fins de registro
     private final String instanceId;
     
@@ -44,8 +53,53 @@ public class ComponentA extends BaseComponent {
     
     @Override
     public void start() {
-        // LOGGER.info("Iniciando instância do Componente A " + instanceId + "...");
         super.start();
+    }
+    
+    @Override
+    protected void onBecomeLeader() {
+        isLeader = true;
+        dataStore.put("role", "leader");
+        dataStore.put("leader_since", String.valueOf(System.currentTimeMillis()));
+        
+        // Agenda replicação periódica de estado
+        scheduler.scheduleAtFixedRate(
+            this::replicateState,
+            1000, 5000, TimeUnit.MILLISECONDS
+        );
+    }
+    
+    @Override
+    protected void onBecomeFollower() {
+        isLeader = false;
+        dataStore.put("role", "follower");
+    }
+    
+    @Override
+    protected String serializeState() {
+        return gson.toJson(dataStore);
+    }
+    
+    @Override
+    protected void processStateUpdate(String stateData) {
+        try {
+            Type type = new TypeToken<Map<String, String>>(){}.getType();
+            Map<String, String> leaderState = gson.fromJson(stateData, type);
+            
+            // Preserva informações locais
+            String localInstance = dataStore.get("instance");
+            String localRole = dataStore.get("role");
+            
+            // Atualiza o estado com os dados do líder
+            dataStore.clear();
+            dataStore.putAll(leaderState);
+            
+            // Restaura informações locais
+            dataStore.put("instance", localInstance);
+            dataStore.put("role", localRole);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Erro ao processar atualização de estado", e);
+        }
     }
     
     @Override
@@ -54,32 +108,26 @@ public class ComponentA extends BaseComponent {
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             OutputStream output = clientSocket.getOutputStream()
         ) {
-            // Lê a requisição HTTP
             StringBuilder requestBuilder = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null && !line.isEmpty()) {
                 requestBuilder.append(line).append("\r\n");
             }
             
-            // Analisa a requisição
             String request = requestBuilder.toString();
             String firstLine = request.substring(0, request.indexOf("\r\n"));
             String[] parts = firstLine.split(" ");
             String method = parts[0];
             String path = parts[1];
             
-            // Processa a requisição
             String response;
             if (path.startsWith("/get/")) {
-                // Requisição GET - formato: /get/{key}
                 String key = path.substring(5);
                 String value = dataStore.getOrDefault(key, "Chave não encontrada");
                 response = buildHTTPResponse("200 OK", "text/plain", value);
             } else if (method.equals("POST") && path.startsWith("/set/")) {
-                // Requisição POST - formato: /set/{key} com valor no corpo
                 String key = path.substring(5);
                 
-                // Lê o corpo da requisição, se presente
                 int contentLength = 0;
                 if (request.contains("Content-Length:")) {
                     String contentLengthStr = request.substring(
@@ -96,29 +144,23 @@ public class ComponentA extends BaseComponent {
                     valueBuilder.append(buffer);
                 }
                 
-                // Armazena o valor
                 String value = valueBuilder.toString();
                 dataStore.put(key, value);
                 response = buildHTTPResponse("200 OK", "text/plain", "Valor armazenado para a chave: " + key);
             } else if (path.equals("/info")) {
-                // Retorna informações do componente
                 String info = "Instância do Componente A " + instanceId + "\n" +
                               "Tamanho do armazenamento: " + dataStore.size() + " entradas\n" +
                               "Executando em: " + host + "\n" +
                               "Porta HTTP: " + httpPort;
                 response = buildHTTPResponse("200 OK", "text/plain", info);
             } else {
-                // Endpoint desconhecido
                 response = buildHTTPResponse("404 Not Found", "text/plain", "Endpoint desconhecido");
             }
             
-            // Envia a resposta
             output.write(response.getBytes());
             output.flush();
-            
-            // LOGGER.info("Componente A[" + instanceId + "] processou requisição HTTP: " + firstLine);
         } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao processar requisição HTTP no Componente A", e);
+            LOGGER.log(Level.WARNING, "Erro ao processar requisição HTTP no Componente A", e);
         }
     }
     
@@ -131,7 +173,6 @@ public class ComponentA extends BaseComponent {
             String request = reader.readLine();
             
             if (request != null && !request.isEmpty()) {
-                // Analisa o formato da requisição: ACTION|KEY|VALUE (VALUE é opcional)
                 String[] parts = request.split("\\|");
                 String action = parts[0].toUpperCase();
                 
@@ -150,10 +191,33 @@ public class ComponentA extends BaseComponent {
                         if (parts.length >= 3) {
                             String key = parts[1];
                             String value = parts[2];
-                            dataStore.put(key, value);
-                            response = "SUCCESS|Valor armazenado para a chave: " + key;
+                            
+                            if (!isLeader && leaderFollower != null && leaderFollower.getLeaderId() != null) {
+                                response = "REDIRECT|" + leaderFollower.getLeaderId() + "|" +
+                                           "Operação de escrita deve ser enviada ao líder";
+                            } else {
+                                dataStore.put(key, value);
+                                response = "SUCCESS|Valor armazenado para a chave: " + key;
+                                
+                                if (isLeader) {
+                                    replicateState();
+                                }
+                            }
                         } else {
                             response = "ERROR|Formato SET inválido, esperado: SET|KEY|VALUE";
+                        }
+                        break;
+                    case "INFO":
+                        response = "INFO|Componente A|" + instanceId + "|" + dataStore.size() + "|" +
+                                   (isLeader ? "LEADER" : "FOLLOWER");
+                        break;
+                    case "LEADER":
+                        if (isLeader) {
+                            response = "LEADER|" + instanceId + "|" + host + "|" + leaderPort;
+                        } else if (leaderFollower != null && leaderFollower.getLeaderId() != null) {
+                            response = "LEADER|" + leaderFollower.getLeaderId();
+                        } else {
+                            response = "UNKNOWN_LEADER";
                         }
                         break;
                     case "LIST":
@@ -164,18 +228,14 @@ public class ComponentA extends BaseComponent {
                         response = "KEYS|" + (keyList.length() > 0 ? 
                                   keyList.substring(0, keyList.length() - 1) : "");
                         break;
-                    case "INFO":
-                        response = "INFO|Componente A|" + instanceId + "|" + dataStore.size();
-                        break;
                     default:
                         response = "ERROR|Ação desconhecida: " + action;
                 }
                 
                 writer.println(response);
-                // LOGGER.info("Componente A[" + instanceId + "] processou requisição TCP: " + action);
             }
         } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao processar requisição TCP no Componente A", e);
+            LOGGER.log(Level.WARNING, "Erro ao processar requisição TCP no Componente A", e);
         }
     }
     
@@ -184,7 +244,6 @@ public class ComponentA extends BaseComponent {
         try {
             String request = new String(data);
             
-            // Analisa o formato da requisição: ACTION|KEY|VALUE (VALUE é opcional)
             String[] parts = request.split("\\|");
             String action = parts[0].toUpperCase();
             
@@ -216,22 +275,27 @@ public class ComponentA extends BaseComponent {
                     response = "ERROR|Ação desconhecida: " + action;
             }
             
-            // Envia a resposta
             byte[] responseData = response.getBytes();
             DatagramPacket responsePacket = new DatagramPacket(
                 responseData, responseData.length, clientAddress, clientPort
             );
             udpServer.send(responsePacket);
-            
-            // LOGGER.info("Componente A[" + instanceId + "] processou requisição UDP: " + action);
         } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no Componente A", e);
+            LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no Componente A", e);
         }
     }
     
     /**
-     * Constrói uma resposta HTTP.
+     * Replica o estado atual para os seguidores (quando for líder).
      */
+    @Override
+    protected void replicateState() {
+        if (isLeader && leaderFollower != null) {
+            String stateData = serializeState();
+            leaderFollower.updateState(stateData);
+        }
+    }
+    
     private String buildHTTPResponse(String status, String contentType, String body) {
         return "HTTP/1.1 " + status + "\r\n" +
                "Content-Type: " + contentType + "\r\n" +
@@ -241,11 +305,7 @@ public class ComponentA extends BaseComponent {
                body;
     }
     
-    /**
-     * Método principal para executar o Componente A de forma independente.
-     */
     public static void main(String[] args) {
-        // Valores padrão
         String host = "localhost";
         int httpPort = 8081;
         int tcpPort = 8082;
@@ -253,26 +313,41 @@ public class ComponentA extends BaseComponent {
         String gatewayHost = "localhost";
         int gatewayRegistrationPort = 8000;
         
-        // Analisa argumentos da linha de comando, se fornecidos
-        if (args.length >= 7) {
+        if (args.length >= 6) {
             host = args[0];
             httpPort = Integer.parseInt(args[1]);
             tcpPort = Integer.parseInt(args[2]);
             udpPort = Integer.parseInt(args[3]);
-            gatewayHost = args[5];
-            gatewayRegistrationPort = Integer.parseInt(args[6]);
+            gatewayHost = args[4];
+            gatewayRegistrationPort = Integer.parseInt(args[5]);
         }
         
-        // Cria e inicia o componente
-        ComponentA component = new ComponentA(
-            host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
-        );
-        component.start();
-        
-        // Adiciona um hook para desligamento
-        Runtime.getRuntime().addShutdownHook(new Thread(component::stop));
-        
-        // LOGGER.info("Componente A iniciado com as portas - HTTP: " + httpPort + 
-        //            ", TCP: " + tcpPort + ", UDP: " + udpPort);
+        if (args.length >= 8) {
+            String leaderHost = args[6];
+            int leaderPort = Integer.parseInt(args[7]);
+            
+            ComponentA component = new ComponentA(
+                host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
+            );
+            
+            component.start();
+            
+            component.leaderFollower = LeaderFollower.createFollower(
+                component.componentType, component.instanceId, 
+                host, component.leaderPort,
+                "leader-" + component.componentType, leaderHost, leaderPort
+            );
+            
+            component.leaderFollower
+                .onLeadershipChanged(component::handleLeadershipChange)
+                .onStateUpdate(component::handleStateUpdate)
+                .start();
+            
+        } else {
+            ComponentA component = new ComponentA(
+                host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
+            );
+            component.start();
+        }
     }
 }

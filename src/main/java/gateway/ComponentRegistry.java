@@ -80,6 +80,11 @@ public class ComponentRegistry {
                     LOGGER.info("Registrado " + componentType + " em " + host + 
                                " (HTTP:" + httpPort + ", TCP:" + tcpPort + 
                                ", UDP:" + udpPort + ")");
+                    LOGGER.info("Component registration received: " + componentInfo.getType() + 
+                                " at " + componentInfo.getHost() + 
+                                " (HTTP:" + componentInfo.getHttpPort() + 
+                                ", TCP:" + componentInfo.getTcpPort() + 
+                                ", UDP:" + componentInfo.getUdpPort() + ")");
                 } else {
                     writer.println("REGISTERED|FAILED|Formato de registro inválido");
                     LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);

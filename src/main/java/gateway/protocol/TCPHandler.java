@@ -37,7 +37,7 @@ public class TCPHandler {
     public TCPHandler(APIGateway gateway, int port) {
         this.gateway = gateway;
         this.port = port;
-        this.threadPool = Executors.newFixedThreadPool(10); // Ajuste o tamanho do pool conforme necessário
+        this.threadPool = Executors.newFixedThreadPool(50); // Ajuste o tamanho do pool conforme necessário
     }
     
     /**

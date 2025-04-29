@@ -36,7 +36,7 @@ public class HTTPHandler {
     public HTTPHandler(APIGateway gateway, int port) {
         this.gateway = gateway;
         this.port = port;
-        this.threadPool = Executors.newFixedThreadPool(10); // Ajuste o tamanho do pool conforme necessário
+        this.threadPool = Executors.newFixedThreadPool(50); // Ajuste o tamanho do pool conforme necessário
     }
     
     /**
@@ -162,19 +162,40 @@ public class HTTPHandler {
                 return;
             }
             
-            // Determina o tipo do componente a partir do caminho
+            // Log the original HTTP request path
+            LOGGER.info("Original HTTP request path: " + path);
+
+            // Determine the component type from the path
             String componentType = ""; 
+            String newPath = path;
+
             if (path.startsWith("/")) {
-                String[] pathParts = path.substring(1).split("/");
+                String[] pathParts = path.substring(1).split("/", 2);
                 if (pathParts.length > 0 && !pathParts[0].isEmpty()) {
-                    componentType = pathParts[0].toLowerCase();
+                    // Fix case sensitivity issues - normalize to proper component format
+                    String rawType = pathParts[0].toLowerCase();
+                    if (rawType.equals("componenta")) {
+                        componentType = "componentA";
+                    } else if (rawType.equals("componentb")) {
+                        componentType = "componentB";
+                    } else {
+                        componentType = rawType;
+                    }
+                    
+                    // Rewrite path
+                    newPath = pathParts.length > 1 ? "/" + pathParts[1] : "/";
+                    LOGGER.info("Rewritten path: " + newPath + " for component: " + componentType);
                 }
             }
+
+            LOGGER.info("Routing to component: " + componentType + ", original path: " + path + ", new path: " + newPath);
             
-            LOGGER.info("Encaminhando para o componente: " + componentType);
+            // Modifica a requisição para remover o prefixo do componente
+            String modifiedFirstLine = parts[0] + " " + newPath + " " + parts[2];
+            String modifiedRequestHeader = requestHeader.replace(firstLine, modifiedFirstLine);
             
             // Cria a requisição completa para encaminhar
-            String fullRequest = requestHeader + "\r\n" + requestBody.toString();
+            String fullRequest = modifiedRequestHeader + "\r\n" + requestBody.toString();
             
             try {
                 // Encaminha a requisição para o componente apropriado
@@ -184,12 +205,6 @@ public class HTTPHandler {
                 if (response != null && response.length > 0) {
                     output.write(response);
                     output.flush();
-                    
-                    // Log da resposta para depuração
-                    String responseStr = new String(response);
-                    LOGGER.info("Resposta enviada: " + 
-                                responseStr.substring(0, Math.min(100, responseStr.length())) + 
-                                (responseStr.length() > 100 ? "..." : ""));
                 } else {
                     // Envia um 404 se nenhuma resposta foi retornada
                     String notFoundResponse = "HTTP/1.1 404 Not Found\r\n" +
@@ -209,7 +224,6 @@ public class HTTPHandler {
                 output.write(errorResponse.getBytes());
                 output.flush();
             }
-            
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição HTTP", e);
         } finally {
@@ -231,7 +245,6 @@ public class HTTPHandler {
      */
     public byte[] forwardRequest(ComponentInfo component, byte[] request) throws IOException {
         LOGGER.info("Encaminhando requisição HTTP para " + component.getHost() + ":" + component.getHttpPort());
-        
         try (
             Socket socket = new Socket(component.getHost(), component.getHttpPort());
             OutputStream out = socket.getOutputStream();
@@ -256,7 +269,6 @@ public class HTTPHandler {
                 // Sem resposta do componente
                 return "HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 29\r\n\r\nComponente não respondeu".getBytes();
             }
-            
             responseBuilder.append(statusLine).append("\r\n");
             
             // Lê os cabeçalhos
@@ -279,7 +291,6 @@ public class HTTPHandler {
             if (headersComplete && contentLength > 0) {
                 char[] bodyBuffer = new char[contentLength];
                 int charsRead = in.read(bodyBuffer, 0, contentLength);
-                
                 // Adiciona apenas o que foi realmente lido
                 if (charsRead > 0) {
                     responseBuilder.append(bodyBuffer, 0, charsRead);
@@ -308,7 +319,6 @@ public class HTTPHandler {
                                  "\r\nContent-Length: " + body.length() + 
                                  headers.substring(insertPos);
                     }
-                    
                     responseBuilder = new StringBuilder(headers);
                     responseBuilder.append(body);
                 }
@@ -319,7 +329,6 @@ public class HTTPHandler {
             LOGGER.info("Resposta do componente: " + 
                         responseStr.substring(0, Math.min(100, responseStr.length())) + 
                         (responseStr.length() > 100 ? "..." : ""));
-            
             return responseBuilder.toString().getBytes();
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente: " + e.getMessage(), e);

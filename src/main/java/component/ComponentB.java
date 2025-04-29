@@ -40,7 +40,7 @@ public class ComponentB extends BaseComponent {
     
     @Override
     public void start() {
-        LOGGER.info("Iniciando instância do Componente B " + instanceId + "...");
+        // LOGGER.info("Iniciando instância do Componente B " + instanceId + "...");
         super.start();
     }
     
@@ -116,9 +116,9 @@ public class ComponentB extends BaseComponent {
             output.write(response.getBytes());
             output.flush();
             
-            LOGGER.info("Componente B[" + instanceId + "] processou requisição HTTP: " + firstLine);
+            // LOGGER.info("Componente B[" + instanceId + "] processou requisição HTTP: " + firstLine);
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao processar requisição HTTP no Componente B", e);
+            // LOGGER.log(Level.WARNING, "Erro ao processar requisição HTTP no Componente B", e);
         }
     }
     
@@ -167,10 +167,10 @@ public class ComponentB extends BaseComponent {
                 }
                 
                 writer.println(response);
-                LOGGER.info("Componente B[" + instanceId + "] processou requisição TCP: " + action);
+                // LOGGER.info("Componente B[" + instanceId + "] processou requisição TCP: " + action);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao processar requisição TCP no Componente B", e);
+            // LOGGER.log(Level.WARNING, "Erro ao processar requisição TCP no Componente B", e);
         }
     }
     
@@ -213,9 +213,9 @@ public class ComponentB extends BaseComponent {
             );
             udpServer.send(responsePacket);
             
-            LOGGER.info("Componente B[" + instanceId + "] processou requisição UDP: " + action);
+            // LOGGER.info("Componente B[" + instanceId + "] processou requisição UDP: " + action);
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no Componente B", e);
+            // LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no Componente B", e);
         }
     }
     
@@ -262,7 +262,7 @@ public class ComponentB extends BaseComponent {
         // Adiciona um hook para desligamento
         Runtime.getRuntime().addShutdownHook(new Thread(component::stop));
         
-        LOGGER.info("Componente B iniciado com as portas - HTTP: " + httpPort + 
-                   ", TCP: " + tcpPort + ", UDP: " + udpPort);
+        // LOGGER.info("Componente B iniciado com as portas - HTTP: " + httpPort + 
+        //            ", TCP: " + tcpPort + ", UDP: " + udpPort);
     }
 }

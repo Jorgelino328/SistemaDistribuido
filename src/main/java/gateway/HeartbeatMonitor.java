@@ -59,7 +59,7 @@ public class HeartbeatMonitor {
         }
         
         isRunning = true;
-        LOGGER.info("Iniciando o Monitor de Heartbeat...");
+        // LOGGER.info("Iniciando o Monitor de Heartbeat...");
         
         // Agenda verificações periódicas de heartbeat
         scheduler.scheduleAtFixedRate(
@@ -79,7 +79,7 @@ public class HeartbeatMonitor {
         }
         
         isRunning = false;
-        LOGGER.info("Parando o Monitor de Heartbeat...");
+        // LOGGER.info("Parando o Monitor de Heartbeat...");
         
         // Encerra o scheduler
         scheduler.shutdown();
@@ -116,16 +116,16 @@ public class HeartbeatMonitor {
                     
                     if (missed >= MAX_MISSED_HEARTBEATS) {
                         // Marca o componente como inativo após exceder o limite
-                        LOGGER.warning("Componente " + component.getType() + " em " + 
-                                     component.getHost() + ":" + component.getUdpPort() + 
-                                     " está inativo após " + missed + " heartbeats perdidos");
+                        // LOGGER.warning("Componente " + component.getType() + " em " + 
+                        //              component.getHost() + ":" + component.getUdpPort() + 
+                        //              " está inativo após " + missed + " heartbeats perdidos");
                         registry.markComponentDead(component);
                         missedHeartbeats.remove(component);
                     } else {
                         // Marca o componente como suspeito
-                        LOGGER.info("Componente " + component.getType() + " em " + 
-                                  component.getHost() + ":" + component.getUdpPort() + 
-                                  " perdeu heartbeat (" + missed + "/" + MAX_MISSED_HEARTBEATS + ")");
+                        // LOGGER.info("Componente " + component.getType() + " em " + 
+                        //           component.getHost() + ":" + component.getUdpPort() + 
+                        //           " perdeu heartbeat (" + missed + "/" + MAX_MISSED_HEARTBEATS + ")");
                         registry.markComponentSuspect(component);
                     }
                 } else {
@@ -177,7 +177,7 @@ public class HeartbeatMonitor {
                 return false;
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao verificar a saúde do componente", e);
+            // LOGGER.log(Level.WARNING, "Erro ao verificar a saúde do componente", e);
             return false;
         }
     }

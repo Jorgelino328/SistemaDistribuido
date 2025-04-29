@@ -150,7 +150,7 @@ public class HTTPClient {
             
             return response.toString();
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao enviar requisição HTTP", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao enviar requisição HTTP", e);
             throw e;
         }
     }

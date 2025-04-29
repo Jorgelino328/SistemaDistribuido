@@ -52,7 +52,7 @@ public class TCPClient {
             String response = in.readLine();
             return response;
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao enviar mensagem TCP", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao enviar mensagem TCP", e);
             throw e;
         }
     }

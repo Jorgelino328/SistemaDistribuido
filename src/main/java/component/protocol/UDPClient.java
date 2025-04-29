@@ -80,7 +80,7 @@ public class UDPClient {
             // Processa a resposta
             return new String(receivePacket.getData(), 0, receivePacket.getLength());
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao enviar mensagem UDP", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao enviar mensagem UDP", e);
             throw e;
         }
     }

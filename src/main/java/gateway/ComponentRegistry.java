@@ -77,21 +77,21 @@ public class ComponentRegistry {
                     
                     // Envia confirmação de registro
                     writer.println("REGISTERED|SUCCESS");
-                    LOGGER.info("Registrado " + componentType + " em " + host + 
-                               " (HTTP:" + httpPort + ", TCP:" + tcpPort + 
-                               ", UDP:" + udpPort + ")");
-                    LOGGER.info("Component registration received: " + componentInfo.getType() + 
-                                " at " + componentInfo.getHost() + 
-                                " (HTTP:" + componentInfo.getHttpPort() + 
-                                ", TCP:" + componentInfo.getTcpPort() + 
-                                ", UDP:" + componentInfo.getUdpPort() + ")");
+                    // LOGGER.info("Registrado " + componentType + " em " + host + 
+                    //            " (HTTP:" + httpPort + ", TCP:" + tcpPort + 
+                    //            ", UDP:" + udpPort + ")");
+                    // LOGGER.info("Component registration received: " + componentInfo.getType() + 
+                    //             " at " + componentInfo.getHost() + 
+                    //             " (HTTP:" + componentInfo.getHttpPort() + 
+                    //             ", TCP:" + componentInfo.getTcpPort() + 
+                    //             ", UDP:" + componentInfo.getUdpPort() + ")");
                 } else {
                     writer.println("REGISTERED|FAILED|Formato de registro inválido");
-                    LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);
+                    // LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);
                 }
             }
         } catch (IOException | NumberFormatException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao lidar com o registro do componente", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao lidar com o registro do componente", e);
         }
     }
 
@@ -149,8 +149,8 @@ public class ComponentRegistry {
             
             if (components != null) {
                 components.remove(componentInfo);
-                LOGGER.info("Removido registro de " + componentType + " em " + 
-                          componentInfo.getHost() + ":" + componentInfo.getHttpPort());
+                // LOGGER.info("Removido registro de " + componentType + " em " + 
+                //           componentInfo.getHost() + ":" + componentInfo.getHttpPort());
             }
         } finally {
             lock.writeLock().unlock();

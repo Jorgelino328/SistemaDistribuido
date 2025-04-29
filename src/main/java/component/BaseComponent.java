@@ -84,11 +84,11 @@ public abstract class BaseComponent {
      */
     public void start() {
         if (isRunning) {
-            LOGGER.warning(componentType + " já está em execução");
+            // LOGGER.warning(componentType + " já está em execução");
             return;
         }
         
-        LOGGER.info("Iniciando " + componentType + "...");
+        // LOGGER.info("Iniciando " + componentType + "...");
         isRunning = true;
         
         try {
@@ -103,9 +103,9 @@ public abstract class BaseComponent {
             // Inicia o respondedor de heartbeat
             startHeartbeatResponder();
             
-            LOGGER.info(componentType + " iniciado com sucesso");
+            // LOGGER.info(componentType + " iniciado com sucesso");
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Falha ao iniciar " + componentType, e);
+            // LOGGER.log(Level.SEVERE, "Falha ao iniciar " + componentType, e);
             stop();
         }
     }
@@ -118,7 +118,7 @@ public abstract class BaseComponent {
             return;
         }
         
-        LOGGER.info("Parando " + componentType + "...");
+        // LOGGER.info("Parando " + componentType + "...");
         isRunning = false;
         
         try {
@@ -153,9 +153,9 @@ public abstract class BaseComponent {
                 Thread.currentThread().interrupt();
             }
             
-            LOGGER.info(componentType + " parado");
+            // LOGGER.info(componentType + " parado");
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao parar " + componentType, e);
+            // LOGGER.log(Level.SEVERE, "Erro ao parar " + componentType, e);
         }
     }
     
@@ -180,12 +180,12 @@ public abstract class BaseComponent {
             String response = reader.readLine();
             
             if (response != null && response.startsWith("REGISTERED|SUCCESS")) {
-                LOGGER.info(componentType + " registrado com sucesso no Gateway de API");
+                // LOGGER.info(componentType + " registrado com sucesso no Gateway de API");
             } else {
-                LOGGER.warning("Falha ao registrar no Gateway de API. Resposta: " + response);
+                // LOGGER.warning("Falha ao registrar no Gateway de API. Resposta: " + response);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao registrar no Gateway de API", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao registrar no Gateway de API", e);
         }
     }
     
@@ -202,7 +202,7 @@ public abstract class BaseComponent {
                     threadPool.submit(() -> handleHTTPRequest(clientSocket));
                 } catch (IOException e) {
                     if (isRunning) {
-                        LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão HTTP", e);
+                        // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão HTTP", e);
                     }
                 }
             }
@@ -211,7 +211,7 @@ public abstract class BaseComponent {
         httpThread.setDaemon(true);
         httpThread.start();
         
-        LOGGER.info(componentType + " servidor HTTP iniciado na porta " + httpPort);
+        // LOGGER.info(componentType + " servidor HTTP iniciado na porta " + httpPort);
     }
     
     /**
@@ -227,7 +227,7 @@ public abstract class BaseComponent {
                     threadPool.submit(() -> handleTCPRequest(clientSocket));
                 } catch (IOException e) {
                     if (isRunning) {
-                        LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão TCP", e);
+                        // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão TCP", e);
                     }
                 }
             }
@@ -236,7 +236,7 @@ public abstract class BaseComponent {
         tcpThread.setDaemon(true);
         tcpThread.start();
         
-        LOGGER.info(componentType + " servidor TCP iniciado na porta " + tcpPort);
+        // LOGGER.info(componentType + " servidor TCP iniciado na porta " + tcpPort);
     }
     
     /**
@@ -271,7 +271,7 @@ public abstract class BaseComponent {
                     }
                 } catch (IOException e) {
                     if (isRunning) {
-                        LOGGER.log(Level.SEVERE, "Erro ao receber pacote UDP", e);
+                        // LOGGER.log(Level.SEVERE, "Erro ao receber pacote UDP", e);
                     }
                 }
             }
@@ -280,7 +280,7 @@ public abstract class BaseComponent {
         udpThread.setDaemon(true);
         udpThread.start();
         
-        LOGGER.info(componentType + " servidor UDP iniciado na porta " + udpPort);
+        // LOGGER.info(componentType + " servidor UDP iniciado na porta " + udpPort);
     }
     
     /**
@@ -304,7 +304,7 @@ public abstract class BaseComponent {
             DatagramPacket response = new DatagramPacket(responseData, responseData.length, address, port);
             udpServer.send(response);
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao enviar resposta de heartbeat", e);
+            // LOGGER.log(Level.WARNING, "Erro ao enviar resposta de heartbeat", e);
         }
     }
     

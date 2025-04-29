@@ -67,11 +67,11 @@ public class APIGateway {
      */
     public void start() {
         if (isRunning) {
-            LOGGER.warning("O Gateway de API já está em execução");
+            // LOGGER.warning("O Gateway de API já está em execução");
             return;
         }
         
-        LOGGER.info("Iniciando o Gateway de API...");
+        // LOGGER.info("Iniciando o Gateway de API...");
         isRunning = true;
         
         // Inicia o servidor de registro de componentes
@@ -85,11 +85,11 @@ public class APIGateway {
         // Inicia o monitoramento de heartbeat
         heartbeatMonitor.start();
         
-        LOGGER.info("Gateway de API iniciado com sucesso");
-        LOGGER.info("Aguardando registros de componentes na porta " + registrationPort);
-        LOGGER.info("Servidor HTTP iniciado na porta " + httpPort);
-        LOGGER.info("Servidor TCP iniciado na porta " + tcpPort);
-        LOGGER.info("Servidor UDP iniciado na porta " + udpPort);
+        // LOGGER.info("Gateway de API iniciado com sucesso");
+        // LOGGER.info("Aguardando registros de componentes na porta " + registrationPort);
+        // LOGGER.info("Servidor HTTP iniciado na porta " + httpPort);
+        // LOGGER.info("Servidor TCP iniciado na porta " + tcpPort);
+        // LOGGER.info("Servidor UDP iniciado na porta " + udpPort);
     }
     
     /**
@@ -105,12 +105,12 @@ public class APIGateway {
                         new Thread(() -> registry.handleRegistration(clientSocket)).start();
                     } catch (IOException e) {
                         if (isRunning) {
-                            LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão", e);
+                            // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão", e);
                         }
                     }
                 }
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Erro ao iniciar o servidor de registro", e);
+                // LOGGER.log(Level.SEVERE, "Erro ao iniciar o servidor de registro", e);
             }
         });
         registrationThread.setDaemon(true);
@@ -125,7 +125,7 @@ public class APIGateway {
             return;
         }
         
-        LOGGER.info("Parando o Gateway de API...");
+        // LOGGER.info("Parando o Gateway de API...");
         isRunning = false;
         
         // Para todos os serviços
@@ -145,7 +145,7 @@ public class APIGateway {
             Thread.currentThread().interrupt();
         }
         
-        LOGGER.info("Gateway de API parado");
+        // LOGGER.info("Gateway de API parado");
     }
     
     /**
@@ -160,7 +160,7 @@ public class APIGateway {
         List<ComponentInfo> availableComponents = registry.getAvailableComponents(componentType);
         
         if (availableComponents.isEmpty()) {
-            LOGGER.warning("Nenhum componente " + componentType + " disponível para requisição " + protocol);
+            // LOGGER.warning("Nenhum componente " + componentType + " disponível para requisição " + protocol);
             return "Nenhum componente disponível".getBytes();
         }
         
@@ -168,12 +168,12 @@ public class APIGateway {
         ComponentInfo selected = registry.selectComponent(componentType);
         
         if (selected == null) {
-            LOGGER.warning("Falha ao selecionar um componente " + componentType);
+            // LOGGER.warning("Falha ao selecionar um componente " + componentType);
             return "Falha na seleção do componente".getBytes();
         }
         
-        LOGGER.info("Encaminhando requisição " + protocol + " para " + componentType + 
-                   " em " + selected.getHost() + ":" + selected.getPortForProtocol(protocol));
+        // LOGGER.info("Encaminhando requisição " + protocol + " para " + componentType + 
+        //            " em " + selected.getHost() + ":" + selected.getPortForProtocol(protocol));
         
         // Encaminha a requisição com base no protocolo
         try {
@@ -185,11 +185,11 @@ public class APIGateway {
                 case "udp":
                     return udpHandler.forwardRequest(selected, request);
                 default:
-                    LOGGER.warning("Protocolo não suportado: " + protocol);
+                    // LOGGER.warning("Protocolo não suportado: " + protocol);
                     return "Protocolo não suportado".getBytes();
             }
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente", e);
+            // LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente", e);
             
             // Marca o componente como possivelmente falho
             registry.markComponentSuspect(selected);

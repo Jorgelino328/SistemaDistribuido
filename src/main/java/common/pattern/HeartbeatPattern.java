@@ -123,10 +123,10 @@ public class HeartbeatPattern {
                 startHeartbeatMonitor();
             }
             
-            LOGGER.info("Padrão Heartbeat iniciado para " + componentType + 
-                       " na porta " + port);
+            // LOGGER.info("Padrão Heartbeat iniciado para " + componentType + 
+            //            " na porta " + port);
         } catch (SocketException e) {
-            LOGGER.log(Level.SEVERE, "Falha ao criar o socket de heartbeat", e);
+            // LOGGER.log(Level.SEVERE, "Falha ao criar o socket de heartbeat", e);
             stop();
         }
     }
@@ -157,7 +157,7 @@ public class HeartbeatPattern {
             socket.close();
         }
         
-        LOGGER.info("Padrão Heartbeat parado para " + componentType);
+        // LOGGER.info("Padrão Heartbeat parado para " + componentType);
     }
     
     /**
@@ -169,8 +169,8 @@ public class HeartbeatPattern {
         monitoredComponents.put(createComponentKey(component), component);
         missedHeartbeats.put(createComponentKey(component), 0);
         
-        LOGGER.info("Agora monitorando " + component.getType() + " em " + 
-                   component.getHost() + ":" + component.getUdpPort());
+        // LOGGER.info("Agora monitorando " + component.getType() + " em " + 
+        //            component.getHost() + ":" + component.getUdpPort());
         
         // Inicia o monitor se ainda não estiver em execução
         if (running && monitoredComponents.size() == 1) {
@@ -188,8 +188,8 @@ public class HeartbeatPattern {
         monitoredComponents.remove(key);
         missedHeartbeats.remove(key);
         
-        LOGGER.info("Parou de monitorar " + component.getType() + " em " + 
-                   component.getHost() + ":" + component.getUdpPort());
+        // LOGGER.info("Parou de monitorar " + component.getType() + " em " + 
+        //            component.getHost() + ":" + component.getUdpPort());
     }
     
     /**
@@ -221,7 +221,7 @@ public class HeartbeatPattern {
                     // Timeout esperado, continua
                 } catch (IOException e) {
                     if (running) {
-                        LOGGER.log(Level.WARNING, "Erro no respondedor de heartbeat", e);
+                        // LOGGER.log(Level.WARNING, "Erro no respondedor de heartbeat", e);
                     }
                 }
             }
@@ -298,7 +298,7 @@ public class HeartbeatPattern {
                 }
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao verificar a saúde do componente", e);
+            // LOGGER.log(Level.WARNING, "Erro ao verificar a saúde do componente", e);
         }
     }
     

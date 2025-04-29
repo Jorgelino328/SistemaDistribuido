@@ -100,9 +100,9 @@ public class LeaderFollower {
                 becomeLeader();
             }
             
-            LOGGER.info(componentType + " iniciou o padrão Líder-Seguidor na porta " + port);
+            // LOGGER.info(componentType + " iniciou o padrão Líder-Seguidor na porta " + port);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Falha ao criar o socket líder-seguidor", e);
+            // LOGGER.log(Level.SEVERE, "Falha ao criar o socket líder-seguidor", e);
             stop();
         }
     }
@@ -128,11 +128,11 @@ public class LeaderFollower {
             try {
                 serverSocket.close();
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor", e);
+                // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor", e);
             }
         }
         
-        LOGGER.info(componentType + " parou o padrão Líder-Seguidor");
+        // LOGGER.info(componentType + " parou o padrão Líder-Seguidor");
     }
     
     public LeaderFollower setLeader(String leaderId, String leaderHost, int leaderPort) {
@@ -176,7 +176,7 @@ public class LeaderFollower {
                     handleConnection(clientSocket);
                 } catch (IOException e) {
                     if (running) {
-                        LOGGER.log(Level.WARNING, "Erro ao aceitar conexão", e);
+                        // LOGGER.log(Level.WARNING, "Erro ao aceitar conexão", e);
                     }
                 }
             }
@@ -213,12 +213,12 @@ public class LeaderFollower {
                     }
                 }
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Erro ao manipular conexão", e);
+                // LOGGER.log(Level.WARNING, "Erro ao manipular conexão", e);
             } finally {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
+                    // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
                 }
             }
         }).start();
@@ -242,7 +242,7 @@ public class LeaderFollower {
             followers.add(follower);
             writer.println("WELCOME|" + term.get() + "|" + stateVersion.get() + "|" + currentState);
             
-            LOGGER.info("Seguidor entrou: " + followerId + " em " + followerHost + ":" + followerPort);
+            // LOGGER.info("Seguidor entrou: " + followerId + " em " + followerHost + ":" + followerPort);
         } else {
             writer.println("ERROR|Formato inválido de mensagem JOIN");
         }
@@ -288,7 +288,7 @@ public class LeaderFollower {
                 }
                 
                 writer.println("VOTE|" + electionTerm + "|" + componentId + "|YES");
-                LOGGER.info("Votou em " + candidateId + " no termo " + electionTerm);
+                // LOGGER.info("Votou em " + candidateId + " no termo " + electionTerm);
             } else {
                 writer.println("VOTE|" + term.get() + "|" + componentId + "|NO");
             }
@@ -326,26 +326,26 @@ public class LeaderFollower {
                         onStateUpdate.accept(currentState);
                     }
                     
-                    LOGGER.info("Entrou no cluster como seguidor. Líder: " + leaderId);
+                    // LOGGER.info("Entrou no cluster como seguidor. Líder: " + leaderId);
                 } else if ("REDIRECT".equals(command) && parts.length >= 4) {
                     leaderId = parts[1];
                     leaderHost = parts[2];
                     leaderPort = Integer.parseInt(parts[3]);
                     joinCluster();
                 } else {
-                    LOGGER.warning("Falha ao entrar no cluster. Resposta: " + response);
+                    // LOGGER.warning("Falha ao entrar no cluster. Resposta: " + response);
                     startElection();
                 }
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao entrar no cluster", e);
+            // LOGGER.log(Level.WARNING, "Erro ao entrar no cluster", e);
             startElection();
         }
     }
     
     private void startElection() {
         int newTerm = term.incrementAndGet();
-        LOGGER.info("Iniciando eleição para o termo " + newTerm);
+        // LOGGER.info("Iniciando eleição para o termo " + newTerm);
         becomeLeader();
     }
     
@@ -364,7 +364,7 @@ public class LeaderFollower {
             onLeadershipChanged.accept(true);
         }
         
-        LOGGER.info("Tornou-se líder para o termo " + term.get());
+        // LOGGER.info("Tornou-se líder para o termo " + term.get());
     }
     
     private void replicateState() {
@@ -384,8 +384,8 @@ public class LeaderFollower {
                 ) {
                     writer.println(stateMessage);
                 } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Falha ao replicar estado para seguidor em " + 
-                              follower.getHost() + ":" + follower.getUdpPort(), e);
+                    // LOGGER.log(Level.WARNING, "Falha ao replicar estado para seguidor em " + 
+                    //           follower.getHost() + ":" + follower.getUdpPort(), e);
                     deadFollowers.add(follower);
                 }
             }

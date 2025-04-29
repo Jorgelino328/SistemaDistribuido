@@ -58,7 +58,7 @@ public class HTTPHandler {
                         threadPool.submit(() -> handleRequest(clientSocket));
                     } catch (IOException e) {
                         if (isRunning) {
-                            LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão HTTP", e);
+                            // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão HTTP", e);
                         }
                     }
                 }
@@ -67,9 +67,9 @@ public class HTTPHandler {
             serverThread.setDaemon(true);
             serverThread.start();
             
-            LOGGER.info("Manipulador HTTP iniciado na porta " + port);
+            // LOGGER.info("Manipulador HTTP iniciado na porta " + port);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador HTTP na porta " + port, e);
+            // LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador HTTP na porta " + port, e);
         }
     }
     
@@ -88,11 +88,11 @@ public class HTTPHandler {
                 serverSocket.close();
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor HTTP", e);
+            // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor HTTP", e);
         }
         
         threadPool.shutdown();
-        LOGGER.info("Manipulador HTTP parado");
+        // LOGGER.info("Manipulador HTTP parado");
     }
     
     /**
@@ -136,7 +136,7 @@ public class HTTPHandler {
             String path = parts[1];
             
             // Log da requisição recebida para depuração
-            LOGGER.info("Requisição HTTP recebida: " + firstLine);
+            // LOGGER.info("Requisição HTTP recebida: " + firstLine);
             
             // Tratamento especial para favicon.ico
             if (path.equals("/favicon.ico")) {
@@ -163,7 +163,7 @@ public class HTTPHandler {
             }
             
             // Log the original HTTP request path
-            LOGGER.info("Original HTTP request path: " + path);
+            // LOGGER.info("Original HTTP request path: " + path);
 
             // Determine the component type from the path
             String componentType = ""; 
@@ -184,11 +184,11 @@ public class HTTPHandler {
                     
                     // Rewrite path
                     newPath = pathParts.length > 1 ? "/" + pathParts[1] : "/";
-                    LOGGER.info("Rewritten path: " + newPath + " for component: " + componentType);
+                    // LOGGER.info("Rewritten path: " + newPath + " for component: " + componentType);
                 }
             }
 
-            LOGGER.info("Routing to component: " + componentType + ", original path: " + path + ", new path: " + newPath);
+            // LOGGER.info("Routing to component: " + componentType + ", original path: " + path + ", new path: " + newPath);
             
             // Modifica a requisição para remover o prefixo do componente
             String modifiedFirstLine = parts[0] + " " + newPath + " " + parts[2];
@@ -213,10 +213,10 @@ public class HTTPHandler {
                                               "Componente não encontrado";
                     output.write(notFoundResponse.getBytes());
                     output.flush();
-                    LOGGER.warning("Nenhuma resposta recebida do componente: " + componentType);
+                    // LOGGER.warning("Nenhuma resposta recebida do componente: " + componentType);
                 }
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Erro ao encaminhar requisição para o componente " + componentType, e);
+                // LOGGER.log(Level.WARNING, "Erro ao encaminhar requisição para o componente " + componentType, e);
                 String errorResponse = "HTTP/1.1 500 Internal Server Error\r\n" +
                                       "Content-Type: text/plain\r\n" +
                                       "Content-Length: " + e.getMessage().length() + "\r\n\r\n" +
@@ -225,12 +225,12 @@ public class HTTPHandler {
                 output.flush();
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição HTTP", e);
+            // LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição HTTP", e);
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
+                // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
             }
         }
     }
@@ -244,7 +244,7 @@ public class HTTPHandler {
      * @throws IOException Se ocorrer um erro durante o encaminhamento
      */
     public byte[] forwardRequest(ComponentInfo component, byte[] request) throws IOException {
-        LOGGER.info("Encaminhando requisição HTTP para " + component.getHost() + ":" + component.getHttpPort());
+        // LOGGER.info("Encaminhando requisição HTTP para " + component.getHost() + ":" + component.getHttpPort());
         try (
             Socket socket = new Socket(component.getHost(), component.getHttpPort());
             OutputStream out = socket.getOutputStream();
@@ -326,12 +326,12 @@ public class HTTPHandler {
             
             // Log da primeira parte da resposta para depuração
             String responseStr = responseBuilder.toString();
-            LOGGER.info("Resposta do componente: " + 
-                        responseStr.substring(0, Math.min(100, responseStr.length())) + 
-                        (responseStr.length() > 100 ? "..." : ""));
+            // LOGGER.info("Resposta do componente: " + 
+                        // responseStr.substring(0, Math.min(100, responseStr.length())) + 
+                        // (responseStr.length() > 100 ? "..." : ""));
             return responseBuilder.toString().getBytes();
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente: " + e.getMessage(), e);
+            // LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente: " + e.getMessage(), e);
             String errorResponse = "HTTP/1.1 502 Bad Gateway\r\n" +
                                   "Content-Type: text/plain\r\n" +
                                   "Content-Length: " + e.getMessage().length() + "\r\n\r\n" +

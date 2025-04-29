@@ -88,7 +88,7 @@ public class SystemConfig {
                 try {
                     inputStream = new FileInputStream("config.properties");
                 } catch (IOException e) {
-                    LOGGER.info("Nenhum arquivo config.properties encontrado no sistema de arquivos, usando os valores padrão");
+                    // LOGGER.info("Nenhum arquivo config.properties encontrado no sistema de arquivos, usando os valores padrão");
                     return;
                 }
             }
@@ -97,9 +97,9 @@ public class SystemConfig {
             properties.load(inputStream);
             inputStream.close();
             
-            LOGGER.info("Configuração carregada do arquivo config.properties");
+            // LOGGER.info("Configuração carregada do arquivo config.properties");
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao carregar o arquivo config.properties", e);
+            // LOGGER.log(Level.WARNING, "Erro ao carregar o arquivo config.properties", e);
         }
     }
     
@@ -126,7 +126,7 @@ public class SystemConfig {
             try {
                 return Integer.parseInt(value);
             } catch (NumberFormatException e) {
-                LOGGER.warning("Valor inteiro inválido para a propriedade " + key + ": " + value);
+                // LOGGER.warning("Valor inteiro inválido para a propriedade " + key + ": " + value);
             }
         }
         return defaultValue;

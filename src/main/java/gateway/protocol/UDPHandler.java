@@ -72,7 +72,7 @@ public class UDPHandler {
                         threadPool.submit(() -> handleRequest(data, clientAddress, clientPort));
                     } catch (IOException e) {
                         if (isRunning) {
-                            LOGGER.log(Level.SEVERE, "Erro ao receber pacote UDP", e);
+                            // LOGGER.log(Level.SEVERE, "Erro ao receber pacote UDP", e);
                         }
                     }
                 }
@@ -81,9 +81,9 @@ public class UDPHandler {
             serverThread.setDaemon(true);
             serverThread.start();
             
-            LOGGER.info("Manipulador UDP iniciado na porta " + port);
+            // LOGGER.info("Manipulador UDP iniciado na porta " + port);
         } catch (SocketException e) {
-            LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador UDP na porta " + port, e);
+            // LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador UDP na porta " + port, e);
         }
     }
     
@@ -102,7 +102,7 @@ public class UDPHandler {
         }
         
         threadPool.shutdown();
-        LOGGER.info("Manipulador UDP parado");
+        // LOGGER.info("Manipulador UDP parado");
     }
     
     /**
@@ -141,7 +141,7 @@ public class UDPHandler {
                 socket.send(sendPacket);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição UDP", e);
+            // LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição UDP", e);
         }
     }
     

@@ -34,7 +34,7 @@ public class Main {
             try {
                 instanceNumber = Integer.parseInt(args[1]);
             } catch (NumberFormatException e) {
-                LOGGER.warning("Número de instância inválido: " + args[1]);
+                // LOGGER.warning("Número de instância inválido: " + args[1]);
                 printUsage();
                 System.exit(1);
             }
@@ -52,7 +52,7 @@ public class Main {
                 startComponentB(instanceNumber);
                 break;
             default:
-                LOGGER.warning("Tipo de componente desconhecido: " + componentType);
+                // LOGGER.warning("Tipo de componente desconhecido: " + componentType);
                 printUsage();
                 System.exit(1);
         }
@@ -62,7 +62,7 @@ public class Main {
      * Inicia o Gateway de API.
      */
     private static void startGateway() {
-        LOGGER.info("Iniciando o Gateway de API...");
+        // LOGGER.info("Iniciando o Gateway de API...");
         
         APIGateway gateway = new APIGateway();
         gateway.start();
@@ -80,7 +80,7 @@ public class Main {
      * @param instanceNumber Número da instância a iniciar (1 ou 2)
      */
     private static void startComponentA(int instanceNumber) {
-        LOGGER.info("Iniciando o Componente A (instância " + instanceNumber + ")...");
+        // LOGGER.info("Iniciando o Componente A (instância " + instanceNumber + ")...");
         
         SystemConfig config = SystemConfig.getInstance();
         String host = "localhost";
@@ -117,7 +117,7 @@ public class Main {
      * @param instanceNumber Número da instância a iniciar (1 ou 2)
      */
     private static void startComponentB(int instanceNumber) {
-        LOGGER.info("Iniciando o Componente B (instância " + instanceNumber + ")...");
+        // LOGGER.info("Iniciando o Componente B (instância " + instanceNumber + ")...");
         
         SystemConfig config = SystemConfig.getInstance();
         String host = "localhost";

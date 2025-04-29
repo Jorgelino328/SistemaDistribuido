@@ -59,7 +59,7 @@ public class TCPHandler {
                         threadPool.submit(() -> handleRequest(clientSocket));
                     } catch (IOException e) {
                         if (isRunning) {
-                            LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão TCP", e);
+                            // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão TCP", e);
                         }
                     }
                 }
@@ -68,9 +68,9 @@ public class TCPHandler {
             serverThread.setDaemon(true);
             serverThread.start();
             
-            LOGGER.info("Manipulador TCP iniciado na porta " + port);
+            // LOGGER.info("Manipulador TCP iniciado na porta " + port);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador TCP na porta " + port, e);
+            // LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador TCP na porta " + port, e);
         }
     }
     
@@ -89,11 +89,11 @@ public class TCPHandler {
                 serverSocket.close();
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor TCP", e);
+            // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor TCP", e);
         }
         
         threadPool.shutdown();
-        LOGGER.info("Manipulador TCP parado");
+        // LOGGER.info("Manipulador TCP parado");
     }
     
     /**
@@ -127,12 +127,12 @@ public class TCPHandler {
                 }
             }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição TCP", e);
+            // LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição TCP", e);
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
+                // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
             }
         }
     }

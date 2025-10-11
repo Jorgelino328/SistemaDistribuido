@@ -1,8 +1,7 @@
 package component;
 
 import common.model.ComponentInfo;
-import common.pattern.HeartbeatPattern;
-import common.pattern.LeaderFollower;
+import common.pattern.KeyRangePartition;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,18 +16,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Classe base para todos os componentes no sistema distribuído.
  * Fornece funcionalidades comuns, como:
  * - Registro no Gateway de API
- * - Respostas de heartbeat
+ * - Particionamento por faixa de chaves
  * - Manipuladores de protocolo para HTTP, TCP e UDP 
  */
 public abstract class BaseComponent {
-    private static final Logger LOGGER = Logger.getLogger(BaseComponent.class.getName());
     
     // Informações do componente
     protected final String componentType;
@@ -48,10 +44,7 @@ public abstract class BaseComponent {
     protected final String instanceId;
     
     // Padrões de resiliência
-    protected HeartbeatPattern heartbeat;
-    protected LeaderFollower leaderFollower;
-    protected boolean isLeader = false;
-    protected int leaderPort; // Porta para comunicação leader-follower
+    protected KeyRangePartition keyRangePartition;
     
     // Pools de threads
     protected final ExecutorService threadPool;
@@ -86,7 +79,6 @@ public abstract class BaseComponent {
         this.gatewayHost = gatewayHost;
         this.gatewayRegistrationPort = gatewayRegistrationPort;
         this.instanceId = UUID.randomUUID().toString().substring(0, 8);
-        this.leaderPort = tcpPort + 1000; // Use TCP port + 1000 for leader communication
         
         // Inicializa os pools de threads
         this.threadPool = Executors.newFixedThreadPool(20);
@@ -110,11 +102,8 @@ public abstract class BaseComponent {
             startTCPServer();
             startUDPServer();
             
-            // Inicia o heartbeat
-            initHeartbeat();
-            
-            // Inicia o padrão Leader-Follower
-            initLeaderFollower();
+            // Inicia o particionamento por faixa de chaves
+            initKeyRangePartition();
             
             // Registra no Gateway de API
             registerWithGateway();
@@ -152,12 +141,8 @@ public abstract class BaseComponent {
             }
             
             // Para os padrões
-            if (heartbeat != null) {
-                heartbeat.stop();
-            }
-            
-            if (leaderFollower != null) {
-                leaderFollower.stop();
+            if (keyRangePartition != null) {
+                keyRangePartition.stop();
             }
             
             // Para os pools de threads
@@ -321,95 +306,93 @@ public abstract class BaseComponent {
     }
     
     /**
-     * Inicializa o padrão Heartbeat.
+     * Inicializa o sistema de particionamento por faixa de chaves.
      */
-    protected void initHeartbeat() {
-        heartbeat = HeartbeatPattern.createResponder(componentType, instanceId, host, udpPort);
-        heartbeat.start();
-        
-        // LOGGER.info("Heartbeat inicializado para " + componentType + " " + instanceId);
-    }
-    
-    /**
-     * Inicializa o padrão Leader-Follower.
-     */
-    protected void initLeaderFollower() {
-        // Por padrão, tenta se tornar líder
-        leaderFollower = LeaderFollower.createLeader(componentType, instanceId, host, leaderPort);
+    protected void initKeyRangePartition() {
+        keyRangePartition = new KeyRangePartition(instanceId, componentType);
         
         // Configura callbacks
-        leaderFollower.onLeadershipChanged(this::handleLeadershipChange)
-                     .onStateUpdate(this::handleStateUpdate)
-                     .start();
+        keyRangePartition.onRangeAssigned(this::handleRangeAssignment)
+                        .onTopologyChange(this::handleTopologyChange)
+                        .onDataMigration(this::handleDataMigration);
         
-        // LOGGER.info("Leader-Follower inicializado para " + componentType + " " + instanceId);
+        keyRangePartition.start();
+        
+        // LOGGER.info("Key-Range Partition inicializado para " + componentType + " " + instanceId);
     }
     
     /**
-     * Manipula mudanças de liderança.
+     * Manipula atribuição de uma nova faixa de chaves.
      * 
-     * @param isNowLeader true se este componente se tornou o líder, false caso contrário
+     * @param range Faixa de chaves atribuída a este nó
      */
-    protected void handleLeadershipChange(boolean isNowLeader) {
-        this.isLeader = isNowLeader;
-        if (isNowLeader) {
-            // LOGGER.info(componentType + " " + instanceId + " tornou-se líder");
-            onBecomeLeader();
-        } else {
-            // LOGGER.info(componentType + " " + instanceId + " tornou-se seguidor");
-            onBecomeFollower();
-        }
+    protected void handleRangeAssignment(KeyRangePartition.PartitionRange range) {
+        // LOGGER.info(componentType + " " + instanceId + " recebeu nova faixa: " + range);
+        onRangeAssigned(range);
     }
     
     /**
-     * Manipula atualizações de estado do líder.
+     * Manipula mudanças na topologia do cluster.
      * 
-     * @param stateData Dados de estado serializados
+     * @param nodes Lista de todos os nós conhecidos
      */
-    protected void handleStateUpdate(String stateData) {
-        if (!isLeader) {
-            // LOGGER.info(componentType + " " + instanceId + " recebeu atualização de estado");
-            processStateUpdate(stateData);
-        }
+    protected void handleTopologyChange(java.util.List<ComponentInfo> nodes) {
+        // LOGGER.info(componentType + " " + instanceId + " detectou mudança na topologia. Nós: " + nodes.size());
+        onTopologyChange(nodes);
     }
     
     /**
-     * Método chamado quando este componente se torna líder.
-     * Deve ser implementado pelas subclasses.
+     * Manipula migração de dados.
+     * 
+     * @param migrationInfo Informações sobre a migração
      */
-    protected abstract void onBecomeLeader();
+    protected void handleDataMigration(String migrationInfo) {
+        // LOGGER.info(componentType + " " + instanceId + " iniciando migração: " + migrationInfo);
+        onDataMigration(migrationInfo);
+    }
     
     /**
-     * Método chamado quando este componente se torna seguidor.
-     * Deve ser implementado pelas subclasses.
-     */
-    protected abstract void onBecomeFollower();
-    
-    /**
-     * Processa uma atualização de estado recebida do líder.
+     * Método chamado quando uma nova faixa de chaves é atribuída a este nó.
      * Deve ser implementado pelas subclasses.
      * 
-     * @param stateData Dados de estado serializados
+     * @param range Faixa de chaves atribuída
      */
-    protected abstract void processStateUpdate(String stateData);
+    protected abstract void onRangeAssigned(KeyRangePartition.PartitionRange range);
     
     /**
-     * Gera uma representação de estado serializável.
+     * Método chamado quando há mudanças na topologia do cluster.
      * Deve ser implementado pelas subclasses.
      * 
-     * @return Estado serializado como string
+     * @param nodes Lista de todos os nós conhecidos
      */
-    protected abstract String serializeState();
+    protected abstract void onTopologyChange(java.util.List<ComponentInfo> nodes);
     
     /**
-     * Replica o estado atual para os seguidores (quando for líder).
+     * Método chamado quando é necessário migrar dados.
+     * Deve ser implementado pelas subclasses.
+     * 
+     * @param migrationInfo Informações sobre a migração
      */
-    protected void replicateState() {
-        if (isLeader && leaderFollower != null) {
-            String stateData = serializeState();
-            leaderFollower.updateState(stateData);
-            // LOGGER.info(componentType + " " + instanceId + " replicou estado para seguidores");
-        }
+    protected abstract void onDataMigration(String migrationInfo);
+    
+    /**
+     * Verifica se este nó é responsável por uma chave específica.
+     * 
+     * @param key Chave a ser verificada
+     * @return true se este nó for responsável pela chave
+     */
+    protected boolean isResponsibleFor(String key) {
+        return keyRangePartition != null && keyRangePartition.isResponsibleFor(key);
+    }
+    
+    /**
+     * Obtém o nó responsável por uma chave específica.
+     * 
+     * @param key Chave a ser verificada
+     * @return Informações do nó responsável pela chave
+     */
+    protected ComponentInfo getResponsibleNode(String key) {
+        return keyRangePartition != null ? keyRangePartition.getResponsibleNode(key) : null;
     }
     
     /**
@@ -447,6 +430,6 @@ public abstract class BaseComponent {
      * Obtém o objeto de informações do componente.
      */
     protected ComponentInfo getComponentInfo() {
-        return new ComponentInfo(componentType, host, httpPort, tcpPort, udpPort);
+        return new ComponentInfo(componentType, instanceId, host, httpPort, tcpPort, udpPort);
     }
 }

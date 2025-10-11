@@ -85,6 +85,29 @@ public class ComponentRegistry {
                     //             " (HTTP:" + componentInfo.getHttpPort() + 
                     //             ", TCP:" + componentInfo.getTcpPort() + 
                     //             ", UDP:" + componentInfo.getUdpPort() + ")");
+                } else if (registrationMessage.startsWith("DISCOVER:")) {
+                    // Manipula solicitação de descoberta de nós
+                    String componentType = registrationMessage.substring(9);
+                    List<ComponentInfo> nodes = getAvailableComponents(componentType);
+                    
+                    // Converte para JSON (implementação simples)
+                    StringBuilder jsonBuilder = new StringBuilder();
+                    jsonBuilder.append("[");
+                    for (int i = 0; i < nodes.size(); i++) {
+                        if (i > 0) jsonBuilder.append(",");
+                        ComponentInfo node = nodes.get(i);
+                        jsonBuilder.append("{")
+                                   .append("\"type\":\"").append(node.getType()).append("\",")
+                                   .append("\"instanceId\":\"").append(node.getInstanceId()).append("\",")
+                                   .append("\"host\":\"").append(node.getHost()).append("\",")
+                                   .append("\"httpPort\":").append(node.getHttpPort()).append(",")
+                                   .append("\"tcpPort\":").append(node.getTcpPort()).append(",")
+                                   .append("\"udpPort\":").append(node.getUdpPort())
+                                   .append("}");
+                    }
+                    jsonBuilder.append("]");
+                    
+                    writer.println("NODES:" + jsonBuilder.toString());
                 } else {
                     writer.println("REGISTERED|FAILED|Formato de registro inválido");
                     // LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);

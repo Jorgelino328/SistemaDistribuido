@@ -1,53 +1,80 @@
-# README.md - Sistema Distribuído Tolerante a Falhas
+# Sistema de Chat Distribuído
 
 ## Visão Geral
-Este projeto implementa um sistema distribuído tolerante a falhas baseado em padrões descritos no livro "Patterns of Distributed Systems" de Unmesh Joshi. O sistema consiste em múltiplos componentes que se comunicam através de um API Gateway, utilizando diversos protocolos de comunicação.
+Este projeto implementa um sistema de chat distribuído utilizando particionamento por faixa de chaves para escalabilidade horizontal. O sistema permite gerenciamento de usuários, autenticação, salas de chat e troca de mensagens em tempo real através de múltiplos protocolos de comunicação.
 
-## Estrutura do Projeto
+## Arquitetura do Sistema
 O sistema é composto por três componentes principais:
-- **API Gateway**: Responsável por receber requisições de clientes e roteá-las para os componentes apropriados.
-- **ComponentA**: Implementa um serviço de armazenamento chave-valor.
-- **ComponentB**: Implementa um serviço de processamento de eventos.
+- **Gateway de API**: Responsável por receber requisições de clientes e roteá-las para os componentes apropriados. Também gerencia o registro e descoberta de nós.
+- **UserService**: Serviço de gerenciamento de usuários, incluindo cadastro, autenticação, perfis e controle de sessões.
+- **MessageService**: Serviço de mensagens e salas de chat, permitindo criação de salas, envio de mensagens e notificações.
+
+## Padrões Implementados
+- **Key-Range Partitioning**: Distribui dados horizontalmente entre múltiplos nós baseado em faixas de chaves
+- **Service Discovery**: Descoberta automática de nós através do Gateway
+- **Automatic Rebalancing**: Rebalanceamento automático quando nós entram ou saem do sistema
 
 ## Requisitos
 - Java 11 ou superior
+- Maven 3.6.0 ou superior
+- JMeter 5.5 ou superior (para testes de carga)
+
+## Como Executar
+
+### Compilando o Projeto
 ```bash
 mvn clean package
 ```
 
 ### Iniciando os Componentes
-1. Inicie o API Gateway primeiro:
+1. Inicie o Gateway de API primeiro:
 ```bash
 java -jar target/distribuida.jar gateway
 ```
 
-2. Inicie instâncias do ComponentA:
+2. Inicie instâncias do UserService:
 ```bash
-java -jar target/distribuida.jar componenta
+java -jar target/distribuida.jar userservice 1
+java -jar target/distribuida.jar userservice 2
 ```
 
-3. Inicie instâncias do ComponentB:
+3. Inicie instâncias do MessageService:
 ```bash
-java -jar target/distribuida.jar componentb
+java -jar target/distribuida.jar messageservice 1
+java -jar target/distribuida.jar messageservice 2
+```
+
+### Teste Automatizado
+Execute o script de teste para validar o sistema:
+```bash
+./test_key_range_partition.sh
 ```
 
 ### Configuração
-As configurações do sistema estão no arquivo `config.properties`. Para executar múltiplas instâncias de um componente, modifique as portas usando parâmetros de linha de comando:
-
-```bash
-
-```
+As configurações do sistema estão no arquivo `config.properties`. As principais configurações incluem:
+- Portas dos serviços HTTP, TCP e UDP
+- Parâmetros de particionamento (tamanho da partição, threshold de rebalanceamento)
+- Configurações do Gateway (host, porta de registro)
 
 ## Protocolos Suportados
-O sistema suporta os seguintes protocolos:
-- HTTP
-- TCP
-- UDP
+O sistema suporta múltiplos protocolos de comunicação:
+- **HTTP**: Para operações RESTful e interface web
+- **TCP**: Para comunicação confiável entre componentes
+- **UDP**: Para operações leves e heartbeat
 
-## Padrões Implementados
-- **Heartbeat**: Para monitoramento da disponibilidade dos componentes
-- **Leader-Follower**: Para replicação de estado e tolerância a falhas
-- Outros padrões do GoF (Gang of Four)
+## Funcionalidades
+
+### UserService
+- Cadastro de usuários com validação de dados
+- Sistema de autenticação com tokens
+- Gerenciamento de perfis de usuário
+- Controle de sessões e presença
+
+### MessageService
+- Criação e gerenciamento de salas de chat
+- Envio e recebimento de mensagens
+- Histórico de mensagens por sala
+- Notificações em tempo real
 
 ## Testando com JMeter
 1. Abra o JMeter e carregue os arquivos de teste:
@@ -59,18 +86,17 @@ O sistema suporta os seguintes protocolos:
 
 3. Execute os testes individualmente para cada protocolo para analisar o desempenho.
 
-## Tolerância a Falhas
-O sistema implementa mecanismos de tolerância a falhas:
-- Detecção de falhas através do padrão Heartbeat
-- Reeleição de líder no padrão Leader-Follower
-- Reconexão automática de componentes
+## Escalabilidade e Tolerância a Falhas
+O sistema implementa mecanismos para alta disponibilidade:
+- Particionamento horizontal automático de dados
+- Descoberta dinâmica de nós no sistema
+- Rebalanceamento automático de partições
+- Redirecionamento transparente de requisições
+- Tolerância a falhas de nós individuais
 
----
+## Documentação Adicional
+Para informações sobre migração de versões anteriores, consulte:
+## Testes
 
-Desenvolvido como parte do projeto acadêmico da disciplina de Sistemas Distribuídos na UFRN.
-- Maven 3.6.0 ou superior
-- JMeter 5.5 ou superior (para testes de carga)
-
-## Como Executar
-
-### Compilando o Projeto
+## Desenvolvido
+Sistema desenvolvido como projeto acadêmico da disciplina de Sistemas Distribuídos.

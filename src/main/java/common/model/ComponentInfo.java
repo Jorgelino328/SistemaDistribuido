@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ComponentInfo {
     private final String type;
+    private final String instanceId;
     private final String host;
     private final int httpPort;
     private final int tcpPort;
@@ -24,17 +25,32 @@ public class ComponentInfo {
      * Construtor para ComponentInfo.
      * 
      * @param type Tipo do componente (ex.: "componentA", "componentB")
+     * @param instanceId ID único da instância do componente
+     * @param host Endereço do host
+     * @param httpPort Porta HTTP
+     * @param tcpPort Porta TCP
+     * @param udpPort Porta UDP
+     */
+    public ComponentInfo(String type, String instanceId, String host, int httpPort, int tcpPort, int udpPort) {
+        this.type = type;
+        this.instanceId = instanceId;
+        this.host = host;
+        this.httpPort = httpPort;
+        this.tcpPort = tcpPort;
+        this.udpPort = udpPort;
+    }
+    
+    /**
+     * Construtor para ComponentInfo (compatibilidade).
+     * 
+     * @param type Tipo do componente (ex.: "componentA", "componentB")
      * @param host Endereço do host
      * @param httpPort Porta HTTP
      * @param tcpPort Porta TCP
      * @param udpPort Porta UDP
      */
     public ComponentInfo(String type, String host, int httpPort, int tcpPort, int udpPort) {
-        this.type = type;
-        this.host = host;
-        this.httpPort = httpPort;
-        this.tcpPort = tcpPort;
-        this.udpPort = udpPort;
+        this(type, type + "_" + host + "_" + httpPort, host, httpPort, tcpPort, udpPort);
     }
     
     /**
@@ -44,6 +60,15 @@ public class ComponentInfo {
      */
     public String getType() {
         return type;
+    }
+    
+    /**
+     * Obtém o ID único da instância.
+     * 
+     * @return ID da instância
+     */
+    public String getInstanceId() {
+        return instanceId;
     }
     
     /**
@@ -170,18 +195,20 @@ public class ComponentInfo {
                tcpPort == that.tcpPort &&
                udpPort == that.udpPort &&
                Objects.equals(type, that.type) &&
+               Objects.equals(instanceId, that.instanceId) &&
                Objects.equals(host, that.host);
     }
     
     @Override
     public int hashCode() {
-        return Objects.hash(type, host, httpPort, tcpPort, udpPort);
+        return Objects.hash(type, instanceId, host, httpPort, tcpPort, udpPort);
     }
     
     @Override
     public String toString() {
         return "ComponentInfo{" +
                "type='" + type + '\'' +
+               ", instanceId='" + instanceId + '\'' +
                ", host='" + host + '\'' +
                ", httpPort=" + httpPort +
                ", tcpPort=" + tcpPort +

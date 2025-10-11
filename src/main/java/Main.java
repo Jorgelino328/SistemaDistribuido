@@ -1,6 +1,6 @@
 import common.config.SystemConfig;
-import component.ComponentA;
-import component.ComponentB;
+import component.UserService;
+import component.MessageService;
 import gateway.APIGateway;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -45,11 +45,18 @@ public class Main {
             case "gateway":
                 startGateway();
                 break;
+            case "userservice":
+                startUserService(instanceNumber);
+                break;
+            case "messageservice":
+                startMessageService(instanceNumber);
+                break;
+            // Mantém compatibilidade com nomes antigos
             case "componenta":
-                startComponentA(instanceNumber);
+                startUserService(instanceNumber);
                 break;
             case "componentb":
-                startComponentB(instanceNumber);
+                startMessageService(instanceNumber);
                 break;
             default:
                 // LOGGER.warning("Tipo de componente desconhecido: " + componentType);
@@ -75,12 +82,12 @@ public class Main {
     }
     
     /**
-     * Inicia uma instância do Componente A.
+     * Inicia uma instância do UserService.
      * 
      * @param instanceNumber Número da instância a iniciar (1 ou 2)
      */
-    private static void startComponentA(int instanceNumber) {
-        // LOGGER.info("Iniciando o Componente A (instância " + instanceNumber + ")...");
+    private static void startUserService(int instanceNumber) {
+        // LOGGER.info("Iniciando o UserService (instância " + instanceNumber + ")...");
         
         SystemConfig config = SystemConfig.getInstance();
         String host = "localhost";
@@ -99,7 +106,7 @@ public class Main {
             udpPort = config.getIntProperty("componentA.udp.port." + instanceNumber, 8193);
         }
         
-        ComponentA component = new ComponentA(
+        UserService component = new UserService(
             host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
@@ -112,12 +119,12 @@ public class Main {
     }
     
     /**
-     * Inicia uma instância do Componente B.
+     * Inicia uma instância do MessageService.
      * 
      * @param instanceNumber Número da instância a iniciar (1 ou 2)
      */
-    private static void startComponentB(int instanceNumber) {
-        // LOGGER.info("Iniciando o Componente B (instância " + instanceNumber + ")...");
+    private static void startMessageService(int instanceNumber) {
+        // LOGGER.info("Iniciando o MessageService (instância " + instanceNumber + ")...");
         
         SystemConfig config = SystemConfig.getInstance();
         String host = "localhost";
@@ -136,7 +143,7 @@ public class Main {
             udpPort = config.getIntProperty("componentB.udp.port." + instanceNumber, 8293);
         }
         
-        ComponentB component = new ComponentB(
+        MessageService component = new MessageService(
             host, httpPort, tcpPort, udpPort, gatewayHost, gatewayRegistrationPort
         );
         component.start();
@@ -157,17 +164,38 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Digite 'exit' para parar o componente...");
         
-        while (true) {
-            String command = scanner.nextLine().trim().toLowerCase();
-            if ("exit".equals(command)) {
-                System.out.println("Parando o componente...");
-                stopHandler.run();
-                System.out.println("Componente parado.");
-                break;
+        try {
+            while (true) {
+                if (scanner.hasNextLine()) {
+                    String command = scanner.nextLine().trim().toLowerCase();
+                    if ("exit".equals(command)) {
+                        System.out.println("Parando o componente...");
+                        stopHandler.run();
+                        System.out.println("Componente parado.");
+                        break;
+                    }
+                } else {
+                    // Se não há entrada disponível, aguarda um pouco
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
+        } catch (java.util.NoSuchElementException e) {
+            // Se não há entrada disponível, apenas mantém o componente rodando
+            System.out.println("Executando em modo daemon - use CTRL+C para parar...");
+            try {
+                // Aguarda indefinidamente até interrupção
+                Thread.currentThread().join();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+        } finally {
+            scanner.close();
         }
-        
-        scanner.close();
     }
     
     /**
@@ -176,11 +204,13 @@ public class Main {
     private static void printUsage() {
         System.out.println("Uso: java -jar sistema-distribuido.jar [tipoComponente] [numeroInstancia]");
         System.out.println("  onde tipoComponente é um dos seguintes:");
-        System.out.println("    gateway     - Inicia o Gateway de API");
-        System.out.println("    componentA  - Inicia uma instância do Componente A");
-        System.out.println("    componentB  - Inicia uma instância do Componente B");
+        System.out.println("    gateway       - Inicia o Gateway de API");
+        System.out.println("    userservice   - Inicia uma instância do UserService (gerenciamento de usuários)");
+        System.out.println("    messageservice - Inicia uma instância do MessageService (sistema de mensagens)");
+        System.out.println("    componentA    - Inicia uma instância do Componente A (alias para userservice)");
+        System.out.println("    componentB    - Inicia uma instância do Componente B (alias para messageservice)");
         System.out.println("  numeroInstancia é opcional (padrão: 1):");
-        System.out.println("    1          - Primeira instância do componente");
-        System.out.println("    2          - Segunda instância do componente");
+        System.out.println("    1            - Primeira instância do componente");
+        System.out.println("    2            - Segunda instância do componente");
     }
 }

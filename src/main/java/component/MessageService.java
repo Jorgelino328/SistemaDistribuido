@@ -192,6 +192,12 @@ public class MessageService extends BaseComponent {
             String request = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
             // Remove any null bytes that might be present
             request = request.replaceAll("\0", "");
+            
+            if (request.startsWith("HEARTBEAT")) {
+                sendHeartbeatResponse(clientAddress, clientPort);
+                return;
+            }
+            
             String[] parts = request.split("\\|");
             
             if (parts.length < 1) {

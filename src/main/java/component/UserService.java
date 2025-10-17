@@ -368,6 +368,11 @@ public class UserService extends BaseComponent {
             // Remove any null bytes that might be present
             request = request.replaceAll("\0", "");
             
+            if (request.startsWith("HEARTBEAT")) {
+                sendHeartbeatResponse(clientAddress, clientPort);
+                return;
+            }
+            
             String[] parts = request.split("\\|");
             String action = parts[0].toUpperCase();
             

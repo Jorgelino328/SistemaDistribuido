@@ -26,6 +26,8 @@ public class SystemConfig {
     private static final int DEFAULT_TCP_PORT = 8081;
     private static final int DEFAULT_UDP_PORT = 8082;
     private static final int DEFAULT_REGISTRATION_PORT = 8000;
+    private static final int DEFAULT_HEARTBEAT_INTERVAL = 10; // segundos
+    private static final int DEFAULT_HEARTBEAT_TIMEOUT = 30; // segundos
     
     /**
      * Construtor privado para evitar instância direta.
@@ -68,6 +70,10 @@ public class SystemConfig {
         properties.setProperty("messageservice.http.port", "8281");
         properties.setProperty("messageservice.tcp.port", "8282");
         properties.setProperty("messageservice.udp.port", "8283");
+        
+        // Configuração do Heartbeat
+        properties.setProperty("heartbeat.interval", String.valueOf(DEFAULT_HEARTBEAT_INTERVAL));
+        properties.setProperty("heartbeat.timeout", String.valueOf(DEFAULT_HEARTBEAT_TIMEOUT));
     }
     
     /**
@@ -224,6 +230,24 @@ public class SystemConfig {
      */
     public int getMessageServiceUdpPort() {
         return getIntProperty("messageservice.udp.port", 8283);
+    }
+    
+    /**
+     * Obtém o intervalo de heartbeat em segundos.
+     * 
+     * @return Intervalo de heartbeat
+     */
+    public int getHeartbeatInterval() {
+        return getIntProperty("heartbeat.interval", DEFAULT_HEARTBEAT_INTERVAL);
+    }
+    
+    /**
+     * Obtém o timeout de heartbeat em segundos.
+     * 
+     * @return Timeout de heartbeat
+     */
+    public int getHeartbeatTimeout() {
+        return getIntProperty("heartbeat.timeout", DEFAULT_HEARTBEAT_TIMEOUT);
     }
     
 }

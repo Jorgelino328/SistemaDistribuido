@@ -11,7 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -392,6 +392,19 @@ public abstract class BaseComponent {
     }
     
 
+    
+    /**
+     * Envia uma resposta de heartbeat via UDP.
+     */
+    protected void sendHeartbeatResponse(InetAddress address, int port) {
+        try {
+            byte[] responseData = "HEARTBEAT_ACK".getBytes(StandardCharsets.UTF_8);
+            DatagramPacket response = new DatagramPacket(responseData, responseData.length, address, port);
+            udpServer.send(response);
+        } catch (IOException e) {
+            // LOGGER.log(Level.WARNING, "Erro ao enviar resposta de heartbeat", e);
+        }
+    }
     
     /**
      * Lida com uma requisição HTTP.

@@ -250,6 +250,51 @@ public class ComponentRegistry {
     }
 
     /**
+     * Obtém todos os componentes registrados como uma lista única.
+     * 
+     * @return Lista de todos os componentes
+     */
+    public List<ComponentInfo> getAllComponentsList() {
+        lock.readLock().lock();
+        try {
+            List<ComponentInfo> allComponents = new ArrayList<>();
+            for (List<ComponentInfo> components : componentsByType.values()) {
+                allComponents.addAll(components);
+            }
+            return allComponents;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Remove um componente específico do registro.
+     * 
+     * @param componentToRemove Componente a ser removido
+     */
+    public void removeComponent(ComponentInfo componentToRemove) {
+        lock.writeLock().lock();
+        try {
+            List<ComponentInfo> components = componentsByType.get(componentToRemove.getType());
+            if (components != null) {
+                components.removeIf(comp -> comp.getInstanceId().equals(componentToRemove.getInstanceId()));
+                LOGGER.info("Componente removido: " + componentToRemove.getInstanceId());
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Marca um componente como suspeito.
+     * 
+     * @param componentInfo Informações do componente
+     */
+    public void markComponentSuspect(ComponentInfo componentInfo) {
+        componentInfo.markSuspect();
+    }
+
+    /**
      * Obtém todos os componentes registrados.
      * 
      * @return Mapa de componentes por tipo

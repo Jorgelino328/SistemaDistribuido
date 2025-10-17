@@ -2,6 +2,7 @@ package gateway;
 
 import common.model.ComponentInfo;
 import common.config.SystemConfig;
+import common.pattern.HeartbeatMonitor;
 import java.util.List;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -29,6 +30,9 @@ public class APIGateway {
     // Registro de componentes
     private final ComponentRegistry registry;
     
+    // Monitor de heartbeat
+    private final HeartbeatMonitor heartbeatMonitor;
+    
     // Configuração
     private final int httpPort;
     private final int tcpPort;
@@ -51,6 +55,12 @@ public class APIGateway {
         
         // Inicializa os componentes
         this.registry = new ComponentRegistry();
+        
+        // Inicializa o monitor de heartbeat
+        SystemConfig config2 = SystemConfig.getInstance();
+        this.heartbeatMonitor = new HeartbeatMonitor(registry, 
+                                                    config2.getHeartbeatInterval(),
+                                                    config2.getHeartbeatTimeout());
         
         // Inicializa os manipuladores de protocolo
         this.httpHandler = new gateway.protocol.HTTPHandler(this, httpPort);
@@ -77,6 +87,9 @@ public class APIGateway {
         httpHandler.start();
         tcpHandler.start();
         udpHandler.start();
+        
+        // Inicia o monitor de heartbeat
+        heartbeatMonitor.start();
         
         // LOGGER.info("Gateway de API iniciado com sucesso");
         // LOGGER.info("Aguardando registros de componentes na porta " + registrationPort);
@@ -125,6 +138,9 @@ public class APIGateway {
         httpHandler.stop();
         tcpHandler.stop();
         udpHandler.stop();
+        
+        // Para o monitor de heartbeat
+        heartbeatMonitor.stop();
         
         // Encerra o agendador
         scheduler.shutdown();
@@ -183,8 +199,8 @@ public class APIGateway {
         } catch (Exception e) {
             // LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente", e);
             
-            // Marca o componente como inativo
-            selected.markDead();
+            // Marca o componente como possivelmente falho
+            registry.markComponentSuspect(selected);
             
             return ("Erro ao encaminhar requisição: " + e.getMessage()).getBytes();
         }

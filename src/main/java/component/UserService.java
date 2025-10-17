@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +34,7 @@ public class UserService extends BaseComponent {
      */
     public UserService(String host, int httpPort, int tcpPort, int udpPort,
                       String gatewayHost, int gatewayRegistrationPort) {
-        super("userService", host, httpPort, tcpPort, udpPort, 
+        super("userservice", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
         
         // Gera um ID único para a instância
@@ -197,6 +198,16 @@ public class UserService extends BaseComponent {
                             break;
                     }
                 }
+            } else if (path.equals("/info")) {
+                // Special endpoint for testing and monitoring
+                KeyRangePartition.PartitionRange myRange = keyRangePartition != null ? 
+                                                           keyRangePartition.getMyRange() : null;
+                String rangeInfo = myRange != null ? 
+                                  (myRange.getStartKey() + "-" + myRange.getEndKey()) : "unknown";
+                
+                responseBody = "{\"status\":\"ok\",\"service\":\"UserService\",\"instance\":\"" + instanceId + 
+                              "\",\"users\":" + userStore.keySet().stream().mapToLong(key -> key.startsWith("user:") ? 1 : 0).sum() +
+                              ",\"range\":\"" + rangeInfo + "\",\"timestamp\":" + System.currentTimeMillis() + "}";
             } else {
                 responseBody = "UserService - Sistema de Chat Distribuído\\n" +
                               "Instância: " + instanceId + "\\n" +
@@ -352,7 +363,10 @@ public class UserService extends BaseComponent {
     @Override
     protected void handleUDPRequest(byte[] data, InetAddress clientAddress, int clientPort) {
         try {
-            String request = new String(data);
+            // Convert bytes to string and clean up any null bytes or extra whitespace
+            String request = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
+            // Remove any null bytes that might be present
+            request = request.replaceAll("\0", "");
             
             if (request.startsWith("HEARTBEAT")) {
                 sendHeartbeatResponse(clientAddress, clientPort);
@@ -362,6 +376,39 @@ public class UserService extends BaseComponent {
                 
                 String response;
                 switch (action) {
+                    case "CREATE":
+                        if (parts.length >= 4) {
+                            String username = parts[2];
+                            String email = parts[3];
+                            String userKey = "user:" + username;
+                            
+                            if (isResponsibleFor(userKey)) {
+                                String userData = String.format("{\"username\":\"%s\",\"email\":\"%s\",\"role\":\"user\",\"status\":\"online\"}", 
+                                                              username, email);
+                                userStore.put(userKey, userData);
+                                response = "SUCCESS|User created: " + username;
+                            } else {
+                                response = "REDIRECT|Not responsible for user: " + username;
+                            }
+                        } else {
+                            response = "ERROR|CREATE requires: CREATE|user|username|email";
+                        }
+                        break;
+                    case "GET":
+                        if (parts.length >= 3 && "user".equals(parts[1])) {
+                            String username = parts[2];
+                            String userKey = "user:" + username;
+                            
+                            if (isResponsibleFor(userKey)) {
+                                String userData = userStore.getOrDefault(userKey, null);
+                                response = userData != null ? "SUCCESS|" + userData : "ERROR|User not found: " + username;
+                            } else {
+                                response = "REDIRECT|Not responsible for user: " + username;
+                            }
+                        } else {
+                            response = "ERROR|GET requires: GET|user|username";
+                        }
+                        break;
                     case "USER_EXISTS":
                         if (parts.length >= 2) {
                             String username = parts[1];
@@ -383,13 +430,13 @@ public class UserService extends BaseComponent {
                                                       .sum();
                         break;
                     case "INFO":
-                        response = "INFO|UserService|" + instanceId + "|" + userStore.size();
+                        response = "SUCCESS|UserService|" + instanceId + "|" + userStore.size();
                         break;
                     default:
                         response = "ERROR|Ação desconhecida: " + action;
                 }
                 
-                byte[] responseData = response.getBytes();
+                byte[] responseData = response.getBytes(StandardCharsets.UTF_8);
                 DatagramPacket responsePacket = new DatagramPacket(
                     responseData, responseData.length, clientAddress, clientPort
                 );

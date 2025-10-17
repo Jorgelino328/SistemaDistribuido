@@ -59,15 +59,15 @@ public class SystemConfig {
         properties.setProperty("gateway.udp.port", String.valueOf(DEFAULT_UDP_PORT));
         properties.setProperty("gateway.registration.port", String.valueOf(DEFAULT_REGISTRATION_PORT));
         
-        // Configuração do Componente A
-        properties.setProperty("componentA.http.port", "8181");
-        properties.setProperty("componentA.tcp.port", "8182");
-        properties.setProperty("componentA.udp.port", "8183");
+        // Configuração do UserService
+        properties.setProperty("userservice.http.port", "8181");
+        properties.setProperty("userservice.tcp.port", "8182");
+        properties.setProperty("userservice.udp.port", "8183");
         
-        // Configuração do Componente B
-        properties.setProperty("componentB.http.port", "8281");
-        properties.setProperty("componentB.tcp.port", "8282");
-        properties.setProperty("componentB.udp.port", "8283");
+        // Configuração do MessageService
+        properties.setProperty("messageservice.http.port", "8281");
+        properties.setProperty("messageservice.tcp.port", "8282");
+        properties.setProperty("messageservice.udp.port", "8283");
         
         // Configuração de Heartbeat
         properties.setProperty("heartbeat.interval.ms", "5000");
@@ -178,57 +178,57 @@ public class SystemConfig {
     }
     
     /**
-     * Obtém a porta HTTP do Componente A.
+     * Obtém a porta HTTP do UserService.
      * 
-     * @return Porta HTTP do Componente A
+     * @return Porta HTTP do UserService
      */
-    public int getComponentAHttpPort() {
-        return getIntProperty("componentA.http.port", 8181);
+    public int getUserServiceHttpPort() {
+        return getIntProperty("userservice.http.port", 8181);
     }
     
     /**
-     * Obtém a porta TCP do Componente A.
+     * Obtém a porta TCP do UserService.
      * 
-     * @return Porta TCP do Componente A
+     * @return Porta TCP do UserService
      */
-    public int getComponentATcpPort() {
-        return getIntProperty("componentA.tcp.port", 8182);
+    public int getUserServiceTcpPort() {
+        return getIntProperty("userservice.tcp.port", 8182);
     }
     
     /**
-     * Obtém a porta UDP do Componente A.
+     * Obtém a porta UDP do UserService.
      * 
-     * @return Porta UDP do Componente A
+     * @return Porta UDP do UserService
      */
-    public int getComponentAUdpPort() {
-        return getIntProperty("componentA.udp.port", 8183);
+    public int getUserServiceUdpPort() {
+        return getIntProperty("userservice.udp.port", 8183);
     }
     
     /**
-     * Obtém a porta HTTP do Componente B.
+     * Obtém a porta HTTP do MessageService.
      * 
-     * @return Porta HTTP do Componente B
+     * @return Porta HTTP do MessageService
      */
-    public int getComponentBHttpPort() {
-        return getIntProperty("componentB.http.port", 8281);
+    public int getMessageServiceHttpPort() {
+        return getIntProperty("messageservice.http.port", 8281);
     }
     
     /**
-     * Obtém a porta TCP do Componente B.
+     * Obtém a porta TCP do MessageService.
      * 
-     * @return Porta TCP do Componente B
+     * @return Porta TCP do MessageService
      */
-    public int getComponentBTcpPort() {
-        return getIntProperty("componentB.tcp.port", 8282);
+    public int getMessageServiceTcpPort() {
+        return getIntProperty("messageservice.tcp.port", 8282);
     }
     
     /**
-     * Obtém a porta UDP do Componente B.
+     * Obtém a porta UDP do MessageService.
      * 
-     * @return Porta UDP do Componente B
+     * @return Porta UDP do MessageService
      */
-    public int getComponentBUdpPort() {
-        return getIntProperty("componentB.udp.port", 8283);
+    public int getMessageServiceUdpPort() {
+        return getIntProperty("messageservice.udp.port", 8283);
     }
     
     /**

@@ -51,13 +51,6 @@ public class Main {
             case "messageservice":
                 startMessageService(instanceNumber);
                 break;
-            // Mantém compatibilidade com nomes antigos
-            case "componenta":
-                startUserService(instanceNumber);
-                break;
-            case "componentb":
-                startMessageService(instanceNumber);
-                break;
             default:
                 // LOGGER.warning("Tipo de componente desconhecido: " + componentType);
                 printUsage();
@@ -97,13 +90,13 @@ public class Main {
         int httpPort, tcpPort, udpPort;
         
         if (instanceNumber == 1) {
-            httpPort = config.getIntProperty("componentA.http.port", 8181);
-            tcpPort = config.getIntProperty("componentA.tcp.port", 8182);
-            udpPort = config.getIntProperty("componentA.udp.port", 8183);
+            httpPort = config.getIntProperty("userService.http.port", 8181);
+            tcpPort = config.getIntProperty("userService.tcp.port", 8182);
+            udpPort = config.getIntProperty("userService.udp.port", 8183);
         } else {
-            httpPort = config.getIntProperty("componentA.http.port." + instanceNumber, 8191);
-            tcpPort = config.getIntProperty("componentA.tcp.port." + instanceNumber, 8192);
-            udpPort = config.getIntProperty("componentA.udp.port." + instanceNumber, 8193);
+            httpPort = config.getIntProperty("userService.http.port." + instanceNumber, 8191);
+            tcpPort = config.getIntProperty("userService.tcp.port." + instanceNumber, 8192);
+            udpPort = config.getIntProperty("userService.udp.port." + instanceNumber, 8193);
         }
         
         UserService component = new UserService(
@@ -134,13 +127,13 @@ public class Main {
         int httpPort, tcpPort, udpPort;
         
         if (instanceNumber == 1) {
-            httpPort = config.getIntProperty("componentB.http.port", 8281);
-            tcpPort = config.getIntProperty("componentB.tcp.port", 8282);
-            udpPort = config.getIntProperty("componentB.udp.port", 8283);
+            httpPort = config.getIntProperty("messageService.http.port", 8281);
+            tcpPort = config.getIntProperty("messageService.tcp.port", 8282);
+            udpPort = config.getIntProperty("messageService.udp.port", 8283);
         } else {
-            httpPort = config.getIntProperty("componentB.http.port." + instanceNumber, 8291);
-            tcpPort = config.getIntProperty("componentB.tcp.port." + instanceNumber, 8292);
-            udpPort = config.getIntProperty("componentB.udp.port." + instanceNumber, 8293);
+            httpPort = config.getIntProperty("messageService.http.port." + instanceNumber, 8291);
+            tcpPort = config.getIntProperty("messageService.tcp.port." + instanceNumber, 8292);
+            udpPort = config.getIntProperty("messageService.udp.port." + instanceNumber, 8293);
         }
         
         MessageService component = new MessageService(
@@ -207,8 +200,6 @@ public class Main {
         System.out.println("    gateway       - Inicia o Gateway de API");
         System.out.println("    userservice   - Inicia uma instância do UserService (gerenciamento de usuários)");
         System.out.println("    messageservice - Inicia uma instância do MessageService (sistema de mensagens)");
-        System.out.println("    componentA    - Inicia uma instância do Componente A (alias para userservice)");
-        System.out.println("    componentB    - Inicia uma instância do Componente B (alias para messageservice)");
         System.out.println("  numeroInstancia é opcional (padrão: 1):");
         System.out.println("    1            - Primeira instância do componente");
         System.out.println("    2            - Segunda instância do componente");

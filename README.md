@@ -44,12 +44,6 @@ java -jar target/distribuida.jar messageservice 1
 java -jar target/distribuida.jar messageservice 2
 ```
 
-### Teste Automatizado
-Execute o script de teste para validar o sistema:
-```bash
-./test_key_range_partition.sh
-```
-
 ### Configuração
 As configurações do sistema estão no arquivo `config.properties`. As principais configurações incluem:
 - Portas dos serviços HTTP, TCP e UDP

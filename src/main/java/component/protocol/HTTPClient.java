@@ -31,7 +31,7 @@ public class HTTPClient {
     /**
      * Envia uma requisição GET para um componente via Gateway de API.
      * 
-     * @param componentType Tipo do componente de destino (ex.: "componentA")
+     * @param componentType Tipo do componente de destino (ex.: "userservice")
      * @param path Caminho da requisição
      * @return Resposta do componente
      * @throws IOException Se ocorrer um erro de I/O
@@ -44,7 +44,7 @@ public class HTTPClient {
     /**
      * Envia uma requisição POST para um componente via Gateway de API.
      * 
-     * @param componentType Tipo do componente de destino (ex.: "componentA")
+     * @param componentType Tipo do componente de destino (ex.: "userservice")
      * @param path Caminho da requisição
      * @param body Conteúdo do corpo da requisição
      * @return Resposta do componente
@@ -58,7 +58,7 @@ public class HTTPClient {
     /**
      * Envia uma requisição PUT para um componente via Gateway de API.
      * 
-     * @param componentType Tipo do componente de destino (ex.: "componentA")
+     * @param componentType Tipo do componente de destino (ex.: "userservice")
      * @param path Caminho da requisição
      * @param body Conteúdo do corpo da requisição
      * @return Resposta do componente
@@ -72,7 +72,7 @@ public class HTTPClient {
     /**
      * Envia uma requisição DELETE para um componente via Gateway de API.
      * 
-     * @param componentType Tipo do componente de destino (ex.: "componentA")
+     * @param componentType Tipo do componente de destino (ex.: "userservice")
      * @param path Caminho da requisição
      * @return Resposta do componente
      * @throws IOException Se ocorrer um erro de I/O

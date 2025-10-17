@@ -31,7 +31,7 @@ public class TCPClient {
     /**
      * Envia uma mensagem para um componente via Gateway de API.
      * 
-     * @param componentType Tipo do componente de destino (ex.: "componentA")
+     * @param componentType Tipo do componente de destino (ex.: "userservice")
      * @param message Mensagem a ser enviada
      * @return Resposta do componente
      * @throws IOException Se ocorrer um erro de I/O
@@ -66,7 +66,7 @@ public class TCPClient {
      * @return Resposta do Componente A
      * @throws IOException Se ocorrer um erro de I/O
      */
-    public String sendToComponentA(String action, String key, String value) throws IOException {
+    public String sendToUserService(String action, String key, String value) throws IOException {
         StringBuilder message = new StringBuilder(action);
         
         if (key != null) {
@@ -77,7 +77,7 @@ public class TCPClient {
             }
         }
         
-        return sendMessage("componentA", message.toString());
+        return sendMessage("userservice", message.toString());
     }
     
     /**
@@ -88,13 +88,13 @@ public class TCPClient {
      * @return Resposta do Componente B
      * @throws IOException Se ocorrer um erro de I/O
      */
-    public String sendToComponentB(String action, String data) throws IOException {
+    public String sendToMessageService(String action, String data) throws IOException {
         StringBuilder message = new StringBuilder(action);
         
         if (data != null) {
             message.append("|").append(data);
         }
         
-        return sendMessage("componentB", message.toString());
+        return sendMessage("messageservice", message.toString());
     }
 }

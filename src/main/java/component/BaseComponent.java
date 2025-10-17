@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,7 +62,7 @@ public abstract class BaseComponent {
     /**
      * Construtor para o componente base.
      * 
-     * @param componentType Tipo do componente (ex.: "componentA", "componentB")
+     * @param componentType Tipo do componente (ex.: "userservice", "messageservice")
      * @param host Endereço local do host
      * @param httpPort Porta para comunicação HTTP
      * @param tcpPort Porta para comunicação TCP
@@ -272,7 +273,7 @@ public abstract class BaseComponent {
                     int clientPort = packet.getPort();
                     
                     // Verifica se é uma mensagem de heartbeat
-                    String message = new String(data);
+                    String message = new String(data, StandardCharsets.UTF_8).replaceAll("\0", "");
                     if ("HEARTBEAT".equals(message)) {
                         sendHeartbeatResponse(clientAddress, clientPort);
                     } else {
@@ -400,7 +401,7 @@ public abstract class BaseComponent {
      */
     protected void sendHeartbeatResponse(InetAddress address, int port) {
         try {
-            byte[] responseData = "HEARTBEAT_ACK".getBytes();
+            byte[] responseData = "HEARTBEAT_ACK".getBytes(StandardCharsets.UTF_8);
             DatagramPacket response = new DatagramPacket(responseData, responseData.length, address, port);
             udpServer.send(response);
         } catch (IOException e) {

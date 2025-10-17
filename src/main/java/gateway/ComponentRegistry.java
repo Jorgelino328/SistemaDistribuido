@@ -37,9 +37,9 @@ public class ComponentRegistry {
      * Construtor do registro de componentes.
      */
     public ComponentRegistry() {
-        // Inicializa com listas vazias para tipos comuns de componentes
-        componentsByType.put("componentA", new ArrayList<>());
-        componentsByType.put("componentB", new ArrayList<>());
+                // Inicializa listas para tipos de componentes conhecidos
+        componentsByType.put("userservice", new ArrayList<>());
+        componentsByType.put("messageservice", new ArrayList<>());
     }
 
     /**

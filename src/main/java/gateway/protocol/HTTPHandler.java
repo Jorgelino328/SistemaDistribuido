@@ -150,8 +150,8 @@ public class HTTPHandler {
                 // Retorna uma página HTML simples listando os componentes disponíveis
                 String html = "<html><body><h1>API Gateway</h1>" +
                               "<p>Componentes disponíveis:</p><ul>" +
-                              "<li><a href=\"/componenta/info\">Componente A</a></li>" +
-                              "<li><a href=\"/componentb/info\">Componente B</a></li>" +
+                              "<li><a href=\"/userservice/info\">User Service</a></li>" +
+                              "<li><a href=\"/messageservice/info\">Message Service</a></li>" +
                               "</ul></body></html>";
                 
                 String response = "HTTP/1.1 200 OK\r\n" +
@@ -172,12 +172,12 @@ public class HTTPHandler {
             if (path.startsWith("/")) {
                 String[] pathParts = path.substring(1).split("/", 2);
                 if (pathParts.length > 0 && !pathParts[0].isEmpty()) {
-                    // Fix case sensitivity issues - normalize to proper component format
+                    // Normalize component type to proper format
                     String rawType = pathParts[0].toLowerCase();
-                    if (rawType.equals("componenta")) {
-                        componentType = "componentA";
-                    } else if (rawType.equals("componentb")) {
-                        componentType = "componentB";
+                    if (rawType.equals("userservice")) {
+                        componentType = "userservice";
+                    } else if (rawType.equals("messageservice")) {
+                        componentType = "messageservice";
                     } else {
                         componentType = rawType;
                     }

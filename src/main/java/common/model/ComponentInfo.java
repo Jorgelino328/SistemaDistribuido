@@ -24,7 +24,7 @@ public class ComponentInfo {
     /**
      * Construtor para ComponentInfo.
      * 
-     * @param type Tipo do componente (ex.: "componentA", "componentB")
+     * @param type Tipo do componente (ex.: "userservice", "messageservice")
      * @param instanceId ID único da instância do componente
      * @param host Endereço do host
      * @param httpPort Porta HTTP
@@ -43,7 +43,7 @@ public class ComponentInfo {
     /**
      * Construtor para ComponentInfo (compatibilidade).
      * 
-     * @param type Tipo do componente (ex.: "componentA", "componentB")
+     * @param type Tipo do componente (ex.: "userservice", "messageservice")
      * @param host Endereço do host
      * @param httpPort Porta HTTP
      * @param tcpPort Porta TCP

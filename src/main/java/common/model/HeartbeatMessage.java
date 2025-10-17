@@ -28,7 +28,7 @@ public class HeartbeatMessage implements Serializable {
      * Construtor para criar uma mensagem de heartbeat.
      * 
      * @param type Tipo da mensagem (PING, PONG, DEAD)
-     * @param componentType Tipo do componente (ex.: "componentA")
+     * @param componentType Tipo do componente (ex.: "userservice")
      * @param componentId ID único da instância do componente
      * @param host Endereço do host do componente
      * @param port Número da porta do componente

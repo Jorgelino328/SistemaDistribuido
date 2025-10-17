@@ -5,13 +5,18 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import common.pattern.KeyRangePartition;
 
 /**
@@ -19,20 +24,23 @@ import common.pattern.KeyRangePartition;
  * Oferece funcionalidades de mensagens, salas de chat e notificações.
  */
 public class MessageService extends BaseComponent {
+    private static final Logger LOGGER = Logger.getLogger(MessageService.class.getName());
     
-    private List<String> messages; // Lista para armazenar mensagens
+    private Map<String, String> messages; // Map para armazenar mensagens com chaves
     private Map<String, List<String>> chatRooms; // Salas de chat
     private Map<String, Set<String>> roomMembers; // Membros das salas
+    private final String instanceId;
 
     /**
      * Construtor para o MessageService.
      */
     public MessageService(String host, int httpPort, int tcpPort, int udpPort,
                           String gatewayHost, int gatewayRegistrationPort) {
-        super("messageService", host, httpPort, tcpPort, udpPort, 
+        super("messageservice", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
         
-        this.messages = new CopyOnWriteArrayList<>();
+        this.instanceId = UUID.randomUUID().toString().substring(0, 8);
+        this.messages = new ConcurrentHashMap<>();
         this.chatRooms = new ConcurrentHashMap<>();
         this.roomMembers = new ConcurrentHashMap<>();
     }
@@ -41,21 +49,21 @@ public class MessageService extends BaseComponent {
     protected void onRangeAssigned(KeyRangePartition.PartitionRange range) {
         // Adiciona mensagem sobre nova faixa atribuída
         String message = System.currentTimeMillis() + ": RANGE_ASSIGNED - " + range.toString();
-        messages.add(message);
+        messages.put("range_" + System.currentTimeMillis(), message);
     }
     
     @Override
     protected void onTopologyChange(List<common.model.ComponentInfo> nodes) {
         // Adiciona mensagem sobre mudança na topologia
         String message = System.currentTimeMillis() + ": TOPOLOGY_CHANGE - " + nodes.size() + " nodes";
-        messages.add(message);
+        messages.put("topo_" + System.currentTimeMillis(), message);
     }
     
     @Override
     protected void onDataMigration(String migrationInfo) {
         // Adiciona mensagem sobre migração de dados
         String message = System.currentTimeMillis() + ": DATA_MIGRATION - " + migrationInfo;
-        messages.add(message);
+        messages.put("migration_" + System.currentTimeMillis(), message);
     }
 
     @Override
@@ -85,6 +93,16 @@ public class MessageService extends BaseComponent {
                 response = handleGetRoomMessages(path);
             } else if (path.startsWith("/rooms/") && method.equals("POST")) {
                 response = handleJoinRoom(path, in);
+            } else if (path.equals("/info")) {
+                // Special endpoint for testing and monitoring
+                String infoResponse = "{\"status\":\"ok\",\"service\":\"MessageService\"," +
+                                     "\"messages\":" + messages.size() + 
+                                     ",\"rooms\":" + chatRooms.size() + 
+                                     ",\"timestamp\":" + System.currentTimeMillis() + "}";
+                response = "HTTP/1.1 200 OK\r\n" +
+                          "Content-Type: application/json\r\n" +
+                          "Content-Length: " + infoResponse.length() + "\r\n" +
+                          "Connection: close\r\n\r\n" + infoResponse;
             } else {
                 response = "HTTP/1.1 404 Not Found\r\n\r\nEndpoint not found";
             }
@@ -170,38 +188,81 @@ public class MessageService extends BaseComponent {
     @Override
     protected void handleUDPRequest(byte[] data, InetAddress clientAddress, int clientPort) {
         try {
-            String request = new String(data).trim();
-            String[] parts = request.split(":", 2);
+            // Convert bytes to string and clean up any null bytes or extra whitespace  
+            String request = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
+            // Remove any null bytes that might be present
+            request = request.replaceAll("\0", "");
+            String[] parts = request.split("\\|");
             
-            if (parts.length < 2) {
-                // Enviar erro de volta via UDP não é trivial, apenas log
-                System.err.println("Formato de requisição UDP inválido: " + request);
+            if (parts.length < 1) {
+                sendUDPResponse("ERROR|Invalid request format", clientAddress, clientPort);
                 return;
             }
             
-            String action = parts[0];
+            String action = parts[0].toUpperCase();
             String response = "";
             
             switch (action) {
+                case "SEND":
+                    if (parts.length >= 4 && "message".equals(parts[1])) {
+                        String sender = parts[2];
+                        String messageText = parts[3];
+                        String messageKey = "msg:" + System.currentTimeMillis();
+                        
+                        if (isResponsibleFor(messageKey)) {
+                            String messageData = String.format("{\"sender\":\"%s\",\"message\":\"%s\",\"timestamp\":%d}", 
+                                                             sender, messageText, System.currentTimeMillis());
+                            messages.put(messageKey, messageData);
+                            response = "MESSAGE_SENT|Message from " + sender + " sent successfully";
+                        } else {
+                            response = "REDIRECT|Not responsible for message";
+                        }
+                    } else {
+                        response = "ERROR|SEND requires: SEND|message|sender|text";
+                    }
+                    break;
+                case "GET":
+                    if (parts.length >= 2 && "messages".equals(parts[1])) {
+                        StringBuilder messagesList = new StringBuilder();
+                        messages.values().forEach(msg -> messagesList.append(msg).append(";"));
+                        response = "SUCCESS|Messages: " + messagesList.toString();
+                    } else {
+                        response = "ERROR|GET requires: GET|messages";
+                    }
+                    break;
                 case "MESSAGE_COUNT":
-                    response = "MESSAGE_COUNT:" + messages.size();
+                    response = "SUCCESS|MESSAGE_COUNT:" + messages.size();
                     break;
                 case "ROOM_COUNT":
-                    response = "ROOM_COUNT:" + chatRooms.size();
+                    response = "SUCCESS|ROOM_COUNT:" + chatRooms.size();
+                    break;
+                case "INFO":
+                    response = "SUCCESS|MessageService|" + instanceId + "|" + messages.size();
                     break;
                 case "HEARTBEAT":
-                    response = "HEARTBEAT:OK";
+                    response = "SUCCESS|HEARTBEAT:OK";
                     break;
                 default:
-                    response = "ERROR:Unknown UDP action: " + action;
+                    response = "ERROR|Unknown UDP action: " + action;
             }
             
-            // Para simplicidade, apenas log da resposta (UDP response requer DatagramSocket)
-            System.out.println("UDP Response to " + clientAddress + ":" + clientPort + " -> " + response);
+            sendUDPResponse(response, clientAddress, clientPort);
             
         } catch (Exception e) {
-            System.err.println("Erro ao processar requisição UDP: " + e.getMessage());
+            try {
+                sendUDPResponse("ERROR|Processing failed: " + e.getMessage(), clientAddress, clientPort);
+            } catch (Exception sendError) {
+                LOGGER.log(Level.WARNING, "Failed to send UDP error response", sendError);
+            }
         }
+    }
+    
+    private void sendUDPResponse(String response, InetAddress clientAddress, int clientPort) throws IOException {
+        byte[] responseData = response.getBytes(StandardCharsets.UTF_8);
+        DatagramPacket responsePacket = new DatagramPacket(
+            responseData, responseData.length, clientAddress, clientPort
+        );
+        udpServer.send(responsePacket);
     }
     
     // Métodos auxiliares para processamento de mensagens
@@ -211,9 +272,11 @@ public class MessageService extends BaseComponent {
         sb.append("HTTP/1.1 200 OK\r\n");
         sb.append("Content-Type: application/json\r\n\r\n");
         sb.append("[");
-        for (int i = 0; i < messages.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(messages.get(i)).append("\"");
+        boolean first = true;
+        for (String message : messages.values()) {
+            if (!first) sb.append(",");
+            sb.append("\"").append(message).append("\"");
+            first = false;
         }
         sb.append("]");
         return sb.toString();
@@ -238,7 +301,7 @@ public class MessageService extends BaseComponent {
         
         // Adiciona mensagem à sala
         chatRooms.computeIfAbsent(roomId, k -> new CopyOnWriteArrayList<>()).add(messageContent);
-        messages.add(messageContent);
+        messages.put("msg_" + System.currentTimeMillis(), messageContent);
         
         return "HTTP/1.1 201 Created\r\n\r\nMessage sent";
     }
@@ -286,7 +349,7 @@ public class MessageService extends BaseComponent {
     
     private String handleMessageSend(String messageContent) {
         String timestampedMessage = System.currentTimeMillis() + ": " + messageContent;
-        messages.add(timestampedMessage);
+        messages.put("tcp_msg_" + System.currentTimeMillis(), timestampedMessage);
         return "MESSAGE_SENT:" + timestampedMessage;
     }
     
@@ -294,7 +357,7 @@ public class MessageService extends BaseComponent {
         if (messages.isEmpty()) {
             return "MESSAGE_GET:No messages";
         }
-        return "MESSAGE_GET:" + String.join("|", messages);
+        return "MESSAGE_GET:" + String.join("|", messages.values());
     }
     
     private String handleRoomJoin(String roomId, String userId) {

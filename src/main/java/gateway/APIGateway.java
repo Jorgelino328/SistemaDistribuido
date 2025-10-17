@@ -26,9 +26,6 @@ public class APIGateway {
     private final gateway.protocol.TCPHandler tcpHandler;
     private final gateway.protocol.UDPHandler udpHandler;
     
-    // Monitor de heartbeat
-    private final HeartbeatMonitor heartbeatMonitor;
-    
     // Registro de componentes
     private final ComponentRegistry registry;
     
@@ -54,7 +51,6 @@ public class APIGateway {
         
         // Inicializa os componentes
         this.registry = new ComponentRegistry();
-        this.heartbeatMonitor = new HeartbeatMonitor(registry);
         
         // Inicializa os manipuladores de protocolo
         this.httpHandler = new gateway.protocol.HTTPHandler(this, httpPort);
@@ -81,9 +77,6 @@ public class APIGateway {
         httpHandler.start();
         tcpHandler.start();
         udpHandler.start();
-        
-        // Inicia o monitoramento de heartbeat
-        heartbeatMonitor.start();
         
         // LOGGER.info("Gateway de API iniciado com sucesso");
         // LOGGER.info("Aguardando registros de componentes na porta " + registrationPort);
@@ -132,7 +125,6 @@ public class APIGateway {
         httpHandler.stop();
         tcpHandler.stop();
         udpHandler.stop();
-        heartbeatMonitor.stop();
         
         // Encerra o agendador
         scheduler.shutdown();
@@ -191,8 +183,8 @@ public class APIGateway {
         } catch (Exception e) {
             // LOGGER.log(Level.SEVERE, "Erro ao encaminhar requisição para o componente", e);
             
-            // Marca o componente como possivelmente falho
-            registry.markComponentSuspect(selected);
+            // Marca o componente como inativo
+            selected.markDead();
             
             return ("Erro ao encaminhar requisição: " + e.getMessage()).getBytes();
         }

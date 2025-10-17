@@ -68,11 +68,6 @@ public class SystemConfig {
         properties.setProperty("messageservice.http.port", "8281");
         properties.setProperty("messageservice.tcp.port", "8282");
         properties.setProperty("messageservice.udp.port", "8283");
-        
-        // Configuração de Heartbeat
-        properties.setProperty("heartbeat.interval.ms", "5000");
-        properties.setProperty("heartbeat.timeout.ms", "3000");
-        properties.setProperty("heartbeat.max.missed", "3");
     }
     
     /**
@@ -231,30 +226,4 @@ public class SystemConfig {
         return getIntProperty("messageservice.udp.port", 8283);
     }
     
-    /**
-     * Obtém o intervalo de heartbeat em milissegundos.
-     * 
-     * @return Intervalo de heartbeat em milissegundos
-     */
-    public int getHeartbeatIntervalMs() {
-        return getIntProperty("heartbeat.interval.ms", 5000);
-    }
-    
-    /**
-     * Obtém o timeout de heartbeat em milissegundos.
-     * 
-     * @return Timeout de heartbeat em milissegundos
-     */
-    public int getHeartbeatTimeoutMs() {
-        return getIntProperty("heartbeat.timeout.ms", 3000);
-    }
-    
-    /**
-     * Obtém o número máximo de heartbeats perdidos antes de considerar um componente como inativo.
-     * 
-     * @return Número máximo de heartbeats perdidos
-     */
-    public int getMaxMissedHeartbeats() {
-        return getIntProperty("heartbeat.max.missed", 3);
-    }
 }

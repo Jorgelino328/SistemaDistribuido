@@ -368,14 +368,11 @@ public class UserService extends BaseComponent {
             // Remove any null bytes that might be present
             request = request.replaceAll("\0", "");
             
-            if (request.startsWith("HEARTBEAT")) {
-                sendHeartbeatResponse(clientAddress, clientPort);
-            } else {
-                String[] parts = request.split("\\|");
-                String action = parts[0].toUpperCase();
-                
-                String response;
-                switch (action) {
+            String[] parts = request.split("\\|");
+            String action = parts[0].toUpperCase();
+            
+            String response;
+            switch (action) {
                     case "CREATE":
                         if (parts.length >= 4) {
                             String username = parts[2];
@@ -436,12 +433,11 @@ public class UserService extends BaseComponent {
                         response = "ERROR|Ação desconhecida: " + action;
                 }
                 
-                byte[] responseData = response.getBytes(StandardCharsets.UTF_8);
-                DatagramPacket responsePacket = new DatagramPacket(
-                    responseData, responseData.length, clientAddress, clientPort
-                );
-                udpServer.send(responsePacket);
-            }
+            byte[] responseData = response.getBytes(StandardCharsets.UTF_8);
+            DatagramPacket responsePacket = new DatagramPacket(
+                responseData, responseData.length, clientAddress, clientPort
+            );
+            udpServer.send(responsePacket);
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no UserService", e);
         }

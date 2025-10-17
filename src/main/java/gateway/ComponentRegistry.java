@@ -180,14 +180,7 @@ public class ComponentRegistry {
         }
     }
 
-    /**
-     * Marca um componente como suspeito.
-     * 
-     * @param componentInfo Informações do componente
-     */
-    public void markComponentSuspect(ComponentInfo componentInfo) {
-        componentInfo.markSuspect();
-    }
+
 
     /**
      * Marca um componente como inativo e remove seu registro.

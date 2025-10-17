@@ -2,7 +2,6 @@ package common.model;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Classe que representa informações sobre um componente no sistema distribuído.
@@ -18,8 +17,6 @@ public class ComponentInfo {
     
     // Status de saúde do componente
     private final AtomicBoolean healthy = new AtomicBoolean(true);
-    private final AtomicBoolean suspect = new AtomicBoolean(false);
-    private final AtomicLong lastHeartbeat = new AtomicLong(System.currentTimeMillis());
     
     /**
      * Construtor para ComponentInfo.
@@ -136,38 +133,13 @@ public class ComponentInfo {
         return healthy.get();
     }
     
-    /**
-     * Verifica se o componente está suspeito.
-     * 
-     * @return true se estiver suspeito, false caso contrário
-     */
-    public boolean isSuspect() {
-        return suspect.get();
-    }
-    
-    /**
-     * Obtém o timestamp do último heartbeat.
-     * 
-     * @return Timestamp do último heartbeat
-     */
-    public long getLastHeartbeat() {
-        return lastHeartbeat.get();
-    }
+
     
     /**
      * Marca o componente como saudável.
      */
     public void markHealthy() {
         healthy.set(true);
-        suspect.set(false);
-        lastHeartbeat.set(System.currentTimeMillis());
-    }
-    
-    /**
-     * Marca o componente como suspeito.
-     */
-    public void markSuspect() {
-        suspect.set(true);
     }
     
     /**
@@ -177,12 +149,7 @@ public class ComponentInfo {
         healthy.set(false);
     }
     
-    /**
-     * Atualiza o timestamp do último heartbeat.
-     */
-    public void updateHeartbeat() {
-        lastHeartbeat.set(System.currentTimeMillis());
-    }
+
     
     @Override
     public boolean equals(Object o) {
@@ -214,7 +181,6 @@ public class ComponentInfo {
                ", tcpPort=" + tcpPort +
                ", udpPort=" + udpPort +
                ", healthy=" + healthy +
-               ", suspect=" + suspect +
                '}';
     }
 }

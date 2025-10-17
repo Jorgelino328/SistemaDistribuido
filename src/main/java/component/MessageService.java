@@ -223,9 +223,10 @@ public class MessageService extends BaseComponent {
                     break;
                 case "GET":
                     if (parts.length >= 2 && "messages".equals(parts[1])) {
-                        StringBuilder messagesList = new StringBuilder();
-                        messages.values().forEach(msg -> messagesList.append(msg).append(";"));
-                        response = "SUCCESS|Messages: " + messagesList.toString();
+                        // For UDP, return only a summary instead of all message content
+                        // to avoid size limitations
+                        int messageCount = messages.size();
+                        response = "SUCCESS|Messages retrieved: " + messageCount + " total messages";
                     } else {
                         response = "ERROR|GET requires: GET|messages";
                     }
@@ -238,9 +239,6 @@ public class MessageService extends BaseComponent {
                     break;
                 case "INFO":
                     response = "SUCCESS|MessageService|" + instanceId + "|" + messages.size();
-                    break;
-                case "HEARTBEAT":
-                    response = "SUCCESS|HEARTBEAT:OK";
                     break;
                 default:
                     response = "ERROR|Unknown UDP action: " + action;
@@ -259,6 +257,13 @@ public class MessageService extends BaseComponent {
     
     private void sendUDPResponse(String response, InetAddress clientAddress, int clientPort) throws IOException {
         byte[] responseData = response.getBytes(StandardCharsets.UTF_8);
+        
+        // Check if response is too large for UDP (limit to ~60KB for safety)
+        if (responseData.length > 60000) {
+            String truncatedResponse = "SUCCESS|Response truncated due to size limit";
+            responseData = truncatedResponse.getBytes(StandardCharsets.UTF_8);
+        }
+        
         DatagramPacket responsePacket = new DatagramPacket(
             responseData, responseData.length, clientAddress, clientPort
         );

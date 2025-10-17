@@ -11,7 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -108,6 +108,9 @@ public abstract class BaseComponent {
             
             // Registra no Gateway de API
             registerWithGateway();
+            
+            // Inicia registro periódico com o gateway
+            startPeriodicRegistration();
             
             // LOGGER.info(componentType + " " + instanceId + " iniciado com sucesso");
         } catch (Exception e) {
@@ -272,14 +275,8 @@ public abstract class BaseComponent {
                     InetAddress clientAddress = packet.getAddress();
                     int clientPort = packet.getPort();
                     
-                    // Verifica se é uma mensagem de heartbeat
-                    String message = new String(data, StandardCharsets.UTF_8).replaceAll("\0", "");
-                    if ("HEARTBEAT".equals(message)) {
-                        sendHeartbeatResponse(clientAddress, clientPort);
-                    } else {
-                        // Lida com a requisição regular
-                        threadPool.submit(() -> handleUDPRequest(data, clientAddress, clientPort));
-                    }
+                    // Lida com a requisição regular
+                    threadPool.submit(() -> handleUDPRequest(data, clientAddress, clientPort));
                 } catch (IOException e) {
                     if (isRunning) {
                         // LOGGER.log(Level.SEVERE, "Erro ao receber pacote UDP", e);
@@ -295,11 +292,9 @@ public abstract class BaseComponent {
     }
     
     /**
-     * Inicia o respondedor de heartbeat.
+     * Inicia o registrador periódico com o gateway.
      */
-    protected void startHeartbeatResponder() {
-        // Para UDP, lidamos com heartbeats no servidor UDP
-        
+    protected void startPeriodicRegistration() {
         scheduler.scheduleAtFixedRate(() -> {
             // Registra periodicamente para lidar com reinícios do gateway
             registerWithGateway();
@@ -396,18 +391,7 @@ public abstract class BaseComponent {
         return keyRangePartition != null ? keyRangePartition.getResponsibleNode(key) : null;
     }
     
-    /**
-     * Envia uma resposta de heartbeat via UDP.
-     */
-    protected void sendHeartbeatResponse(InetAddress address, int port) {
-        try {
-            byte[] responseData = "HEARTBEAT_ACK".getBytes(StandardCharsets.UTF_8);
-            DatagramPacket response = new DatagramPacket(responseData, responseData.length, address, port);
-            udpServer.send(response);
-        } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao enviar resposta de heartbeat", e);
-        }
-    }
+
     
     /**
      * Lida com uma requisição HTTP.

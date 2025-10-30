@@ -5,50 +5,38 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Classe que representa uma mensagem de requisição genérica no sistema distribuído.
- * Usada para comunicação entre componentes e o Gateway de API.
- */
+
 public class Request implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    // Tipos de requisição
+
     public enum Type {
-        GET,        // Operação de leitura
-        POST,       // Operação de criação
-        PUT,        // Operação de atualização
-        DELETE,     // Operação de exclusão
-        INFO,       // Solicitação de informações
-        CUSTOM      // Operação personalizada
+        GET,        
+        POST,       
+        PUT,        
+        DELETE,     
+        INFO,       
+        CUSTOM      
     }
     
-    // Metadados da requisição
+
     private final String id;
     private final Type type;
     private final long timestamp;
     private final String sourceComponent;
     private final String targetComponent;
     
-    // Dados da requisição
+
     private final String path;
     private final Map<String, String> headers;
     private final String body;
     
-    // Rastreamento de resposta
+
     private boolean processed = false;
     private String responseBody;
     private int responseCode = 200;
     
-    /**
-     * Construtor para criar uma requisição.
-     * 
-     * @param type Tipo da requisição
-     * @param sourceComponent Identificador do componente de origem
-     * @param targetComponent Identificador do componente de destino
-     * @param path Caminho ou identificador do recurso da requisição
-     * @param headers Cabeçalhos da requisição
-     * @param body Corpo da requisição
-     */
+
     public Request(Type type, String sourceComponent, String targetComponent, 
                    String path, Map<String, String> headers, String body) {
         this.id = UUID.randomUUID().toString();
@@ -61,171 +49,94 @@ public class Request implements Serializable {
         this.body = body;
     }
     
-    /**
-     * Cria um builder para a classe Request.
-     * 
-     * @return Um novo RequestBuilder
-     */
+ 
     public static RequestBuilder builder() {
         return new RequestBuilder();
     }
     
-    /**
-     * Obtém o ID da requisição.
-     * 
-     * @return ID da requisição
-     */
+
     public String getId() {
         return id;
     }
     
-    /**
-     * Obtém o tipo da requisição.
-     * 
-     * @return Tipo da requisição
-     */
+
     public Type getType() {
         return type;
     }
     
-    /**
-     * Obtém o timestamp da requisição.
-     * 
-     * @return Timestamp da requisição
-     */
+
     public long getTimestamp() {
         return timestamp;
     }
     
-    /**
-     * Obtém o identificador do componente de origem.
-     * 
-     * @return Componente de origem
-     */
+
     public String getSourceComponent() {
         return sourceComponent;
     }
     
-    /**
-     * Obtém o identificador do componente de destino.
-     * 
-     * @return Componente de destino
-     */
+
     public String getTargetComponent() {
         return targetComponent;
     }
     
-    /**
-     * Obtém o caminho da requisição.
-     * 
-     * @return Caminho da requisição
-     */
+
     public String getPath() {
         return path;
     }
     
-    /**
-     * Obtém os cabeçalhos da requisição.
-     * 
-     * @return Mapa de cabeçalhos da requisição
-     */
+
     public Map<String, String> getHeaders() {
         return new HashMap<>(headers);
     }
     
-    /**
-     * Obtém o valor de um cabeçalho específico.
-     * 
-     * @param name Nome do cabeçalho
-     * @return Valor do cabeçalho, ou null se não encontrado
-     */
+
     public String getHeader(String name) {
         return headers.get(name);
     }
     
-    /**
-     * Obtém o corpo da requisição.
-     * 
-     * @return Corpo da requisição
-     */
+
     public String getBody() {
         return body;
     }
     
-    /**
-     * Verifica se a requisição foi processada.
-     * 
-     * @return true se processada, false caso contrário
-     */
+
     public boolean isProcessed() {
         return processed;
     }
     
-    /**
-     * Define o estado de processado.
-     * 
-     * @param processed Novo estado de processado
-     */
+
     public void setProcessed(boolean processed) {
         this.processed = processed;
     }
     
-    /**
-     * Obtém o corpo da resposta.
-     * 
-     * @return Corpo da resposta
-     */
+
     public String getResponseBody() {
         return responseBody;
     }
     
-    /**
-     * Define o corpo da resposta.
-     * 
-     * @param responseBody Novo corpo da resposta
-     */
+
     public void setResponseBody(String responseBody) {
         this.responseBody = responseBody;
         this.processed = true;
     }
     
-    /**
-     * Obtém o código da resposta.
-     * 
-     * @return Código da resposta
-     */
+
     public int getResponseCode() {
         return responseCode;
     }
     
-    /**
-     * Define o código da resposta.
-     * 
-     * @param responseCode Novo código da resposta
-     */
+
     public void setResponseCode(int responseCode) {
         this.responseCode = responseCode;
     }
     
-    /**
-     * Define as informações da resposta.
-     * 
-     * @param responseCode Código da resposta
-     * @param responseBody Corpo da resposta
-     */
     public void setResponse(int responseCode, String responseBody) {
         this.responseCode = responseCode;
         this.responseBody = responseBody;
         this.processed = true;
     }
     
-    /**
-     * Converte a requisição para um formato de string para transmissão na rede.
-     * Formato: REQUEST|TYPE|ID|TIMESTAMP|SOURCE|TARGET|PATH|HEADERS|BODY
-     * Os cabeçalhos são codificados como key1=value1,key2=value2,...
-     * 
-     * @return Representação em string da requisição
-     */
+
     public String toNetworkString() {
         StringBuilder headersStr = new StringBuilder();
         for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -246,13 +157,7 @@ public class Request implements Serializable {
                 body != null ? body : "");
     }
     
-    /**
-     * Analisa uma requisição a partir de uma string de rede.
-     * 
-     * @param message Representação em string da requisição na rede
-     * @return Objeto Request
-     * @throws IllegalArgumentException Se o formato da mensagem for inválido
-     */
+
     public static Request fromNetworkString(String message) {
         if (message == null || !message.startsWith("REQUEST|")) {
             throw new IllegalArgumentException("Formato inválido de mensagem de requisição");
@@ -268,7 +173,7 @@ public class Request implements Serializable {
         String targetComponent = parts[5].isEmpty() ? null : parts[5];
         String path = parts[6].isEmpty() ? null : parts[6];
         
-        // Analisa os cabeçalhos
+
         Map<String, String> headers = new HashMap<>();
         if (!parts[7].isEmpty()) {
             String[] headerParts = parts[7].split(",");
@@ -301,9 +206,7 @@ public class Request implements Serializable {
                '}';
     }
     
-    /**
-     * Classe Builder para criar objetos Request.
-     */
+
     public static class RequestBuilder {
         private Type type = Type.GET;
         private String sourceComponent;

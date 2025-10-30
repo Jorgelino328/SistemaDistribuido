@@ -3,24 +3,20 @@ package gateway.protocol;
 import gateway.APIGateway;
 import common.model.ComponentInfo;
 import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-/**
- * Manipulador TCP para o Gateway de API.
- * 
- * Este manipulador recebe requisições TCP e as encaminha para os componentes apropriados.
- */
+
 public class TCPHandler {
-    private static final Logger LOGGER = Logger.getLogger(TCPHandler.class.getName());
     
     private final APIGateway gateway;
     private final int port;
@@ -28,21 +24,14 @@ public class TCPHandler {
     private final ExecutorService threadPool;
     private boolean isRunning = false;
     
-    /**
-     * Construtor para o manipulador TCP.
-     * 
-     * @param gateway Instância do Gateway de API
-     * @param port Porta para o servidor TCP
-     */
+
     public TCPHandler(APIGateway gateway, int port) {
         this.gateway = gateway;
         this.port = port;
-        this.threadPool = Executors.newFixedThreadPool(50); // Ajuste o tamanho do pool conforme necessário
+        this.threadPool = Executors.newFixedThreadPool(50); 
     }
     
-    /**
-     * Inicia o servidor TCP.
-     */
+ 
     public void start() {
         if (isRunning) {
             return;
@@ -59,7 +48,7 @@ public class TCPHandler {
                         threadPool.submit(() -> handleRequest(clientSocket));
                     } catch (IOException e) {
                         if (isRunning) {
-                            // LOGGER.log(Level.SEVERE, "Erro ao aceitar conexão TCP", e);
+
                         }
                     }
                 }
@@ -68,15 +57,13 @@ public class TCPHandler {
             serverThread.setDaemon(true);
             serverThread.start();
             
-            // LOGGER.info("Manipulador TCP iniciado na porta " + port);
+
         } catch (IOException e) {
-            // LOGGER.log(Level.SEVERE, "Falha ao iniciar o manipulador TCP na porta " + port, e);
+
         }
     }
     
-    /**
-     * Para o servidor TCP.
-     */
+
     public void stop() {
         if (!isRunning) {
             return;
@@ -89,74 +76,92 @@ public class TCPHandler {
                 serverSocket.close();
             }
         } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do servidor TCP", e);
+
         }
         
         threadPool.shutdown();
-        // LOGGER.info("Manipulador TCP parado");
+
     }
     
-    /**
-     * Lida com uma requisição TCP recebida.
-     * 
-     * @param clientSocket Socket do cliente
-     */
+
     private void handleRequest(Socket clientSocket) {
         try (
-            BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()), true)
+            OutputStream output = clientSocket.getOutputStream()
         ) {
-            // Lê a requisição
-            String request = reader.readLine();
-            
+            // Be tolerant to clients that don't send a trailing EOL; read until LF or EOF
+            clientSocket.setSoTimeout(10000);
+            InputStream in = clientSocket.getInputStream();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            int b;
+            while ((b = in.read()) != -1) {
+                if (b == '\n') { break; }
+                buffer.write(b);
+            }
+
+            String request = buffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+            if (request != null) request = request.replace("\r", "");
+
             if (request != null && !request.isEmpty()) {
-                // Analisa o formato da requisição: "COMPONENT_TYPE|REQUISIÇÃO_REAL"
                 String[] parts = request.split("\\|", 2);
-                
                 if (parts.length >= 2) {
                     String componentType = parts[0];
                     String actualRequest = parts[1];
-                    
-                    // Encaminha a requisição para o componente apropriado
+
                     byte[] response = gateway.routeRequest(componentType, actualRequest.getBytes(), "tcp");
-                    
-                    // Envia a resposta de volta ao cliente
-                    writer.println(new String(response));
+
+                    // Ensure exactly one trailing newline for TCP clients that expect EOL (e.g., JMeter EolByte=10)
+                    if (response == null || response.length == 0) {
+                        output.write('\n');
+                    } else if (response[response.length - 1] == (byte) '\n') {
+                        output.write(response);
+                    } else {
+                        output.write(response);
+                        output.write('\n');
+                    }
+                    output.flush();
                 } else {
-                    writer.println("ERRO: Formato de requisição inválido. Esperado: COMPONENT_TYPE|REQUISIÇÃO_REAL");
+                    String err = "ERRO: Formato de requisição inválido. Esperado: COMPONENT_TYPE|REQUISIÇÃO_REAL\n";
+                    output.write(err.getBytes());
+                    output.flush();
                 }
+            } else {
+                // No data received before EOF/timeout; return a newline to avoid client hangs
+                output.write('\n');
+                output.flush();
             }
         } catch (IOException e) {
-            // LOGGER.log(Level.WARNING, "Erro ao lidar com a requisição TCP", e);
+            // swallow to keep handler resilient
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                // LOGGER.log(Level.WARNING, "Erro ao fechar o socket do cliente", e);
             }
         }
     }
     
-    /**
-     * Encaminha uma requisição TCP para um componente.
-     * 
-     * @param component Informações do componente de destino
-     * @param request Requisição em formato de bytes
-     * @return Resposta em formato de bytes
-     * @throws IOException Se ocorrer um erro durante o encaminhamento
-     */
+
     public byte[] forwardRequest(ComponentInfo component, byte[] request) throws IOException {
         try (
             Socket socket = new Socket(component.getHost(), component.getTcpPort());
             PrintWriter out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
         ) {
-            // Envia a requisição para o componente
+
             out.println(new String(request));
             
-            // Lê a resposta
+
             String response = in.readLine();
-            return response != null ? response.getBytes() : "Sem resposta".getBytes();
+            if (response == null) {
+                // Ensure caller will not hang waiting for EOL
+                return "Sem resposta\n".getBytes();
+            }
+
+            // Ensure we return exactly one trailing newline (EOL) for the caller
+            if (response.endsWith("\n")) {
+                return response.getBytes();
+            } else {
+                return (response + "\n").getBytes();
+            }
         }
     }
 }

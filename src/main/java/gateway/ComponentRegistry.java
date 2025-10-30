@@ -1,63 +1,30 @@
 package gateway;
 
 import common.model.ComponentInfo;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.*;
 
-/**
- * Registro de componentes para o Gateway de API.
- * 
- * Gerencia o registro, seleção e monitoramento de componentes distribuídos.
- */
 public class ComponentRegistry {
-    private static final Logger LOGGER = Logger.getLogger(ComponentRegistry.class.getName());
-    
-    // Armazena informações dos componentes por tipo
     private final Map<String, List<ComponentInfo>> componentsByType = new ConcurrentHashMap<>();
-    
-    // Rastreamento do último índice usado para cada tipo de componente (para balanceamento round-robin)
     private final Map<String, Integer> lastUsedIndexByType = new ConcurrentHashMap<>();
-    
-    // Lock para garantir consistência na seleção de componentes
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    /**
-     * Construtor do registro de componentes.
-     */
     public ComponentRegistry() {
-                // Inicializa listas para tipos de componentes conhecidos
         componentsByType.put("userservice", new ArrayList<>());
-        componentsByType.put("messageservice", new ArrayList<>());
+        componentsByType.put("fileservice", new ArrayList<>());
     }
 
-    /**
-     * Lida com o registro de um componente recebido via socket.
-     * 
-     * @param clientSocket Socket do cliente
-     */
     public void handleRegistration(Socket clientSocket) {
         try (
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter writer = new PrintWriter(clientSocket.getOutputStream(), true)
         ) {
-            // Lê a mensagem de registro
             String registrationMessage = reader.readLine();
             
             if (registrationMessage != null && !registrationMessage.isEmpty()) {
-                // Analisa a mensagem de registro
-                // Formato esperado: "REGISTER|componentType|host|httpPort|tcpPort|udpPort"
                 String[] parts = registrationMessage.split("\\|");
                 
                 if (parts.length >= 6 && "REGISTER".equals(parts[0])) {
@@ -67,30 +34,24 @@ public class ComponentRegistry {
                     int tcpPort = Integer.parseInt(parts[4]);
                     int udpPort = Integer.parseInt(parts[5]);
                     
-                    // Cria as informações do componente
                     ComponentInfo componentInfo = new ComponentInfo(
                         componentType, host, httpPort, tcpPort, udpPort
                     );
                     
-                    // Registra o componente
+                    if (parts.length >= 8) {
+                        String keyRangeStart = "null".equals(parts[6]) ? null : parts[6];
+                        String keyRangeEnd = "null".equals(parts[7]) ? null : parts[7];
+                        componentInfo.setKeyRange(keyRangeStart, keyRangeEnd);
+                    }
+                    
                     registerComponent(componentInfo);
                     
-                    // Envia confirmação de registro
                     writer.println("REGISTERED|SUCCESS");
-                    // LOGGER.info("Registrado " + componentType + " em " + host + 
-                    //            " (HTTP:" + httpPort + ", TCP:" + tcpPort + 
-                    //            ", UDP:" + udpPort + ")");
-                    // LOGGER.info("Component registration received: " + componentInfo.getType() + 
-                    //             " at " + componentInfo.getHost() + 
-                    //             " (HTTP:" + componentInfo.getHttpPort() + 
-                    //             ", TCP:" + componentInfo.getTcpPort() + 
-                    //             ", UDP:" + componentInfo.getUdpPort() + ")");
+                    
                 } else if (registrationMessage.startsWith("DISCOVER:")) {
-                    // Manipula solicitação de descoberta de nós
                     String componentType = registrationMessage.substring(9);
                     List<ComponentInfo> nodes = getAvailableComponents(componentType);
                     
-                    // Converte para JSON (implementação simples)
                     StringBuilder jsonBuilder = new StringBuilder();
                     jsonBuilder.append("[");
                     for (int i = 0; i < nodes.size(); i++) {
@@ -110,47 +71,35 @@ public class ComponentRegistry {
                     writer.println("NODES:" + jsonBuilder.toString());
                 } else {
                     writer.println("REGISTERED|FAILED|Formato de registro inválido");
-                    // LOGGER.warning("Mensagem de registro inválida: " + registrationMessage);
                 }
             }
         } catch (IOException | NumberFormatException e) {
-            // LOGGER.log(Level.SEVERE, "Erro ao lidar com o registro do componente", e);
         }
     }
 
-    /**
-     * Registra um componente no sistema.
-     * 
-     * @param componentInfo Informações do componente
-     */
     public void registerComponent(ComponentInfo componentInfo) {
         lock.writeLock().lock();
         try {
             String componentType = componentInfo.getType();
             
-            // Cria uma lista para este tipo de componente, se não existir
             componentsByType.putIfAbsent(componentType, new ArrayList<>());
             
-            // Verifica se o componente já está registrado
             List<ComponentInfo> components = componentsByType.get(componentType);
             boolean alreadyExists = false;
             
             for (int i = 0; i < components.size(); i++) {
                 ComponentInfo existing = components.get(i);
                 if (existing.equals(componentInfo)) {
-                    // Atualiza a entrada existente
                     components.set(i, componentInfo);
                     alreadyExists = true;
                     break;
                 }
             }
             
-            // Adiciona o novo componente, se ainda não estiver registrado
             if (!alreadyExists) {
                 components.add(componentInfo);
             }
             
-            // Reseta o índice usado se este for o primeiro componente do tipo
             if (components.size() == 1) {
                 lastUsedIndexByType.put(componentType, -1);
             }
@@ -159,11 +108,6 @@ public class ComponentRegistry {
         }
     }
 
-    /**
-     * Remove o registro de um componente.
-     * 
-     * @param componentInfo Informações do componente
-     */
     public void deregisterComponent(ComponentInfo componentInfo) {
         lock.writeLock().lock();
         try {
@@ -172,32 +116,17 @@ public class ComponentRegistry {
             
             if (components != null) {
                 components.remove(componentInfo);
-                // LOGGER.info("Removido registro de " + componentType + " em " + 
-                //           componentInfo.getHost() + ":" + componentInfo.getHttpPort());
             }
         } finally {
             lock.writeLock().unlock();
         }
     }
 
-
-
-    /**
-     * Marca um componente como inativo e remove seu registro.
-     * 
-     * @param componentInfo Informações do componente
-     */
     public void markComponentDead(ComponentInfo componentInfo) {
         componentInfo.markDead();
         deregisterComponent(componentInfo);
     }
 
-    /**
-     * Obtém a lista de componentes disponíveis de um tipo específico.
-     * 
-     * @param componentType Tipo do componente
-     * @return Lista de componentes disponíveis
-     */
     public List<ComponentInfo> getAvailableComponents(String componentType) {
         lock.readLock().lock();
         try {
@@ -207,7 +136,6 @@ public class ComponentRegistry {
                 return new ArrayList<>();
             }
             
-            // Filtra apenas os componentes saudáveis
             List<ComponentInfo> healthyComponents = new ArrayList<>();
             for (ComponentInfo component : components) {
                 if (component.isHealthy()) {
@@ -221,12 +149,6 @@ public class ComponentRegistry {
         }
     }
 
-    /**
-     * Seleciona um componente disponível usando balanceamento round-robin.
-     * 
-     * @param componentType Tipo do componente
-     * @return Componente selecionado ou null se nenhum estiver disponível
-     */
     public ComponentInfo selectComponent(String componentType) {
         lock.writeLock().lock();
         try {
@@ -236,11 +158,34 @@ public class ComponentRegistry {
                 return null;
             }
             
-            // Seleção round-robin simples
             int lastIndex = lastUsedIndexByType.getOrDefault(componentType, -1);
             int nextIndex = (lastIndex + 1) % components.size();
             
-            // Atualiza o índice usado
+            lastUsedIndexByType.put(componentType, nextIndex);
+            
+            return components.get(nextIndex);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    public ComponentInfo selectComponentByKey(String componentType, String key) {
+        lock.writeLock().lock();
+        try {
+            List<ComponentInfo> components = getAvailableComponents(componentType);
+            
+            if (components.isEmpty()) {
+                return null;
+            }
+            
+            for (ComponentInfo component : components) {
+                if (component.isResponsibleForKey(key)) {
+                    return component;
+                }
+            }
+            
+            int lastIndex = lastUsedIndexByType.getOrDefault(componentType, -1);
+            int nextIndex = (lastIndex + 1) % components.size();
             lastUsedIndexByType.put(componentType, nextIndex);
             
             return components.get(nextIndex);
@@ -249,11 +194,6 @@ public class ComponentRegistry {
         }
     }
 
-    /**
-     * Obtém todos os componentes registrados como uma lista única.
-     * 
-     * @return Lista de todos os componentes
-     */
     public List<ComponentInfo> getAllComponentsList() {
         lock.readLock().lock();
         try {
@@ -267,42 +207,25 @@ public class ComponentRegistry {
         }
     }
     
-    /**
-     * Remove um componente específico do registro.
-     * 
-     * @param componentToRemove Componente a ser removido
-     */
     public void removeComponent(ComponentInfo componentToRemove) {
         lock.writeLock().lock();
         try {
             List<ComponentInfo> components = componentsByType.get(componentToRemove.getType());
             if (components != null) {
                 components.removeIf(comp -> comp.getInstanceId().equals(componentToRemove.getInstanceId()));
-                LOGGER.info("Componente removido: " + componentToRemove.getInstanceId());
             }
         } finally {
             lock.writeLock().unlock();
         }
     }
     
-    /**
-     * Marca um componente como suspeito.
-     * 
-     * @param componentInfo Informações do componente
-     */
     public void markComponentSuspect(ComponentInfo componentInfo) {
         componentInfo.markSuspect();
     }
 
-    /**
-     * Obtém todos os componentes registrados.
-     * 
-     * @return Mapa de componentes por tipo
-     */
     public Map<String, List<ComponentInfo>> getAllComponents() {
         lock.readLock().lock();
         try {
-            // Cria uma cópia profunda para evitar problemas de modificação concorrente
             Map<String, List<ComponentInfo>> result = new HashMap<>();
             
             for (Map.Entry<String, List<ComponentInfo>> entry : componentsByType.entrySet()) {

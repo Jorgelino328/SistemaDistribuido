@@ -1,13 +1,13 @@
-# Sistema de Chat Distribuído
+# Sistema Distribuído de Armazenamento de Arquivos
 
 ## Visão Geral
-Este projeto implementa um sistema de chat distribuído utilizando particionamento por faixa de chaves para escalabilidade horizontal. O sistema permite gerenciamento de usuários, autenticação, salas de chat e troca de mensagens em tempo real através de múltiplos protocolos de comunicação.
+Este projeto implementa um sistema distribuído de armazenamento de arquivos utilizando particionamento por faixa de chaves para escalabilidade horizontal. O sistema permite gerenciamento de usuários, autenticação e armazenamento/recuperação de arquivos através de múltiplos protocolos de comunicação.
 
 ## Arquitetura do Sistema
 O sistema é composto por três componentes principais:
 - **Gateway de API**: Responsável por receber requisições de clientes e roteá-las para os componentes apropriados. Também gerencia o registro e descoberta de nós.
 - **UserService**: Serviço de gerenciamento de usuários, incluindo cadastro, autenticação, perfis e controle de sessões.
-- **MessageService**: Serviço de mensagens e salas de chat, permitindo criação de salas, envio de mensagens e notificações.
+- **FileStorageService**: Serviço de armazenamento de arquivos, permitindo salvar e recuperar arquivos baseado em chaves de usuário.
 
 ## Padrões Implementados
 - **Key-Range Partitioning**: Distribui dados horizontalmente entre múltiplos nós baseado em faixas de chaves
@@ -38,10 +38,10 @@ java -jar target/distribuida.jar userservice 1
 java -jar target/distribuida.jar userservice 2
 ```
 
-3. Inicie instâncias do MessageService:
+3. Inicie instâncias do FileStorageService:
 ```bash
-java -jar target/distribuida.jar messageservice 1
-java -jar target/distribuida.jar messageservice 2
+java -jar target/distribuida.jar fileservice 1
+java -jar target/distribuida.jar fileservice 2
 ```
 
 ### Configuração
@@ -64,33 +64,10 @@ O sistema suporta múltiplos protocolos de comunicação:
 - Gerenciamento de perfis de usuário
 - Controle de sessões e presença
 
-### MessageService
-- Criação e gerenciamento de salas de chat
-- Envio e recebimento de mensagens
-- Histórico de mensagens por sala
-- Notificações em tempo real
+### FileStorageService
+- Armazenamento de arquivos com chaves baseadas em usuário
+- Recuperação de arquivos por chave
+- Particionamento automático por faixa de chaves (A-M, N-Z)
+- Suporte a múltiplos protocolos (HTTP, TCP, UDP)
 
-## Testando com JMeter
-1. Abra o JMeter e carregue os arquivos de teste:
-   - http_test.jmx
-   - tcp_test.jmx
-   - udp_test.jmx
 
-2. Certifique-se de que todos os componentes estejam em execução antes de iniciar os testes.
-
-3. Execute os testes individualmente para cada protocolo para analisar o desempenho.
-
-## Escalabilidade e Tolerância a Falhas
-O sistema implementa mecanismos para alta disponibilidade:
-- Particionamento horizontal automático de dados
-- Descoberta dinâmica de nós no sistema
-- Rebalanceamento automático de partições
-- Redirecionamento transparente de requisições
-- Tolerância a falhas de nós individuais
-
-## Documentação Adicional
-Para informações sobre migração de versões anteriores, consulte:
-## Testes
-
-## Desenvolvido
-Sistema desenvolvido como projeto acadêmico da disciplina de Sistemas Distribuídos.

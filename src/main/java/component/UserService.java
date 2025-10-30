@@ -16,33 +16,28 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import common.pattern.KeyRangePartition;
 
-/**
- * Implementação do UserService - serviço de gerenciamento de usuários com particionamento por faixa de chaves.
- * Gerencia perfis de usuários, autenticação, sessões e status de presença.
- */
+
 public class UserService extends BaseComponent {
     private static final Logger LOGGER = Logger.getLogger(UserService.class.getName());
     
-    // Armazenamento de dados de usuários em memória
+
     private final Map<String, String> userStore = new ConcurrentHashMap<>();
 
-    // Identificador da instância para fins de registro
+
     private final String instanceId;
     
-    /**
-     * Construtor para o UserService.
-     */
+
     public UserService(String host, int httpPort, int tcpPort, int udpPort,
                       String gatewayHost, int gatewayRegistrationPort) {
         super("userservice", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
         
-        // Gera um ID único para a instância
+
         this.instanceId = UUID.randomUUID().toString().substring(0, 8);
         
-        // Adiciona alguns usuários de exemplo
-        userStore.put("user:admin", "{\"username\":\"admin\",\"email\":\"admin@chat.com\",\"role\":\"admin\",\"status\":\"online\"}");
-        userStore.put("user:john", "{\"username\":\"john\",\"email\":\"john@chat.com\",\"role\":\"user\",\"status\":\"offline\"}");
+
+        userStore.put("user:admin", "{\"username\":\"admin\",\"email\":\"admin@system.com\",\"role\":\"admin\",\"status\":\"online\"}");
+        userStore.put("user:john", "{\"username\":\"john\",\"email\":\"john@system.com\",\"role\":\"user\",\"status\":\"offline\"}");
         userStore.put("auth:token123", "{\"username\":\"admin\",\"expires\":\"" + (System.currentTimeMillis() + 3600000) + "\"}");
         userStore.put("instance", instanceId);
     }
@@ -54,7 +49,7 @@ public class UserService extends BaseComponent {
     
     @Override
     protected void onRangeAssigned(KeyRangePartition.PartitionRange range) {
-        // LOGGER.info("UserService[" + instanceId + "] recebeu nova faixa: " + range);
+
         userStore.put("range_start", range.getStartKey() != null ? range.getStartKey() : "null");
         userStore.put("range_end", range.getEndKey() != null ? range.getEndKey() : "null");
         userStore.put("responsible", String.valueOf(range.isResponsible()));
@@ -63,14 +58,14 @@ public class UserService extends BaseComponent {
     
     @Override
     protected void onTopologyChange(java.util.List<common.model.ComponentInfo> nodes) {
-        // LOGGER.info("UserService[" + instanceId + "] detectou mudança na topologia. Nós: " + nodes.size());
+
         userStore.put("topology_size", String.valueOf(nodes.size()));
         userStore.put("topology_updated", String.valueOf(System.currentTimeMillis()));
     }
     
     @Override
     protected void onDataMigration(String migrationInfo) {
-        // LOGGER.info("UserService[" + instanceId + "] iniciando migração: " + migrationInfo);
+
         userStore.put("migration_info", migrationInfo);
         userStore.put("migration_time", String.valueOf(System.currentTimeMillis()));
     }
@@ -90,7 +85,6 @@ public class UserService extends BaseComponent {
             String request = requestBuilder.toString();
             String firstLine = request.substring(0, request.indexOf("\r\n"));
             String[] parts = firstLine.split(" ");
-            String method = parts[0];
             String path = parts[1];
             
             String responseBody = "";
@@ -155,7 +149,6 @@ public class UserService extends BaseComponent {
                         case "LOGIN":
                             if (pathParts.length >= 3) {
                                 String username = pathParts[1];
-                                String password = pathParts[2];
                                 String userKey = "user:" + username;
                                 
                                 if (isResponsibleFor(userKey)) {
@@ -199,7 +192,7 @@ public class UserService extends BaseComponent {
                     }
                 }
             } else if (path.equals("/info")) {
-                // Special endpoint for testing and monitoring
+
                 KeyRangePartition.PartitionRange myRange = keyRangePartition != null ? 
                                                            keyRangePartition.getMyRange() : null;
                 String rangeInfo = myRange != null ? 
@@ -209,13 +202,19 @@ public class UserService extends BaseComponent {
                               "\",\"users\":" + userStore.keySet().stream().mapToLong(key -> key.startsWith("user:") ? 1 : 0).sum() +
                               ",\"range\":\"" + rangeInfo + "\",\"timestamp\":" + System.currentTimeMillis() + "}";
             } else {
-                responseBody = "UserService - Sistema de Chat Distribuído\\n" +
+                responseBody = "UserService - Sistema Distribuído de Armazenamento\\n" +
                               "Instância: " + instanceId + "\\n" +
                               "Usuários registrados: " + userStore.size();
             }
             
-            String response = buildHTTPResponse("200 OK", "application/json", responseBody);
-            output.write(response.getBytes());
+            // Build full HTTP response
+            String httpResponse = "HTTP/1.1 200 OK\r\n" +
+                                 "Content-Type: application/json\r\n" +
+                                 "Content-Length: " + responseBody.length() + "\r\n" +
+                                 "\r\n" +
+                                 responseBody;
+            
+            output.write(httpResponse.getBytes());
             output.flush();
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Erro ao processar requisição HTTP no UserService", e);
@@ -290,7 +289,6 @@ public class UserService extends BaseComponent {
                     case "AUTH_LOGIN":
                         if (parts.length >= 3) {
                             String username = parts[1];
-                            String password = parts[2];
                             String userKey = "user:" + username;
                             
                             if (isResponsibleFor(userKey)) {
@@ -363,9 +361,9 @@ public class UserService extends BaseComponent {
     @Override
     protected void handleUDPRequest(byte[] data, InetAddress clientAddress, int clientPort) {
         try {
-            // Convert bytes to string and clean up any null bytes or extra whitespace
+
             String request = new String(data, java.nio.charset.StandardCharsets.UTF_8).trim();
-            // Remove any null bytes that might be present
+
             request = request.replaceAll("\0", "");
             
             if (request.startsWith("HEARTBEAT")) {
@@ -379,9 +377,9 @@ public class UserService extends BaseComponent {
             String response;
             switch (action) {
                     case "CREATE":
-                        if (parts.length >= 4) {
-                            String username = parts[2];
-                            String email = parts[3];
+                        if (parts.length >= 3) {
+                            String username = parts[1];
+                            String email = parts[2];
                             String userKey = "user:" + username;
                             
                             if (isResponsibleFor(userKey)) {
@@ -446,15 +444,6 @@ public class UserService extends BaseComponent {
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Erro ao processar requisição UDP no UserService", e);
         }
-    }
-    
-    private String buildHTTPResponse(String status, String contentType, String body) {
-        return "HTTP/1.1 " + status + "\r\n" +
-               "Content-Type: " + contentType + "\r\n" +
-               "Content-Length: " + body.length() + "\r\n" +
-               "Connection: close\r\n" +
-               "\r\n" +
-               body;
     }
     
     public static void main(String[] args) {

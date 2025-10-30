@@ -1,213 +1,575 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TCP Key-Range Partitioning Test" enabled="true">
-      <stringProp name="TestPlan.comments">Teste de particionamento por faixa de chaves via protocolo TCP</stringProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="File Storage System - TCP Test">
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
-      <elementProp name="TestPlan.arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TCP Load Test Group">
-        <intProp name="ThreadGroup.num_threads">10</intProp>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+        <intProp name="ThreadGroup.num_threads">200</intProp>
         <intProp name="ThreadGroup.ramp_time">5</intProp>
+        <longProp name="ThreadGroup.duration">60</longProp>
+        <longProp name="ThreadGroup.delay">0</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
-          <stringProp name="LoopController.loops">1</stringProp>
+          <intProp name="LoopController.loops">-1</intProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="UserService Status Check" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">5000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">5000</stringProp>
-          <stringProp name="TCPSampler.request">UserService|USER_GET|nonexistent
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - UserService Info" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    def request = &quot;userservice|INFO&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.contains(&quot;UserService&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
 </stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Gateway Response" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="6481884">REDIRECT</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="UserService Gateway Routing Test Key A" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">5000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">5000</stringProp>
-          <stringProp name="TCPSampler.request">UserService|USER_CREATE|A${__threadNum}|password123
-</stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Gateway Routes Correctly" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="6481884">REDIRECT</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="UserService Gateway Routing Test Key Z" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">5000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">5000</stringProp>
-          <stringProp name="TCPSampler.request">UserService|USER_CREATE|Z${__threadNum}|password123
-</stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Gateway Routes Correctly" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="6481884">REDIRECT</stringProp>
+              <stringProp name="-944811958">UserService</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="MessageService Status Check" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">5000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">5000</stringProp>
-          <stringProp name="TCPSampler.request">MessageService|MESSAGE_GET:
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - User Create Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;alice_${threadNum}&quot;
+def email = &quot;alice${threadNum}@test.com&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;userservice|USER_CREATE|${username}|${email}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;USER_CREATE|${username}|${email}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
 </stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Service Response" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="1281131230">MESSAGE_GET</stringProp>
+              <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
             <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="MessageService Send Message Key A" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">10000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">10000</stringProp>
-          <stringProp name="TCPSampler.request">MessageService|MESSAGE_SEND:general:Hello from TCP Key A thread ${__threadNum}!
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - User Create Key Z" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;zoe_${threadNum}&quot;
+def email = &quot;zoe${threadNum}@test.com&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;userservice|USER_CREATE|${username}|${email}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;USER_CREATE|${username}|${email}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
 </stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Message Sent Successfully" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="1060719856">MESSAGE_SENT</stringProp>
+              <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="MessageService Send Message Key Z" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">10000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">10000</stringProp>
-          <stringProp name="TCPSampler.request">MessageService|MESSAGE_SEND:general:Hello from TCP Key Z thread ${__threadNum}!
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Store Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;alice_${threadNum}&quot;
+def filename = &quot;document_A.txt&quot;
+def content = &quot;ContentFromTCPThread${threadNum}&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;fileservice|FILE_STORE|${username}|${filename}|${content}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;FILE_STORE|${username}|${filename}|${content}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
 </stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Message Sent Successfully" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="1060719856">MESSAGE_SENT</stringProp>
+              <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="MessageService Get Messages" enabled="true">
-          <stringProp name="TCPSampler.classname">TCPClientImpl</stringProp>
-          <stringProp name="TCPSampler.server">localhost</stringProp>
-          <boolProp name="TCPSampler.reUseConnection">true</boolProp>
-          <stringProp name="TCPSampler.port">8081</stringProp>
-          <boolProp name="TCPSampler.nodelay">true</boolProp>
-          <stringProp name="TCPSampler.timeout">10000</stringProp>
-          <stringProp name="TCPSampler.ctimeout">10000</stringProp>
-          <stringProp name="TCPSampler.request">MessageService|MESSAGE_GET:
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Store Key Z" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;zoe_${threadNum}&quot;
+def filename = &quot;document_Z.txt&quot;
+def content = &quot;ContentFromTCPThread${threadNum}&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;fileservice|FILE_STORE|${username}|${filename}|${content}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;FILE_STORE|${username}|${filename}|${content}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
 </stringProp>
-          <boolProp name="TCPSampler.closeConnection">true</boolProp>
-          <stringProp name="TCPSampler.EolByte">10</stringProp>
-          <stringProp name="ConfigTestElement.username"></stringProp>
-          <stringProp name="ConfigTestElement.password"></stringProp>
-        </TCPSampler>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Messages Retrieved" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="1281131230">MESSAGE_GET</stringProp>
+              <stringProp name="-1149187101">SUCCESS</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Retrieve Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;alice_${threadNum}&quot;
+def filename = &quot;document_A.txt&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;fileservice|FILE_RETRIEVE|${username}|${filename}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;FILE_RETRIEVE|${username}|${filename}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;FILE_DATA&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1499381901">FILE_DATA</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Retrieve Key Z">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+def threadNum = ctx.getThreadNum()
+def username = &quot;zoe_${threadNum}&quot;
+def filename = &quot;document_Z.txt&quot;
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    // First attempt - to gateway
+    def request = &quot;fileservice|FILE_RETRIEVE|${username}|${filename}&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    // Check if redirect
+    if (response.startsWith(&quot;REDIRECT|&quot;)) {
+        def parts = response.split(/\|/)
+        if (parts.length &gt;= 4) {
+            def redirectHost = parts[2]
+            def httpPort = parts[3] as Integer
+            def tcpPort = httpPort + 1
+            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
+            
+            def directRequest = &quot;FILE_RETRIEVE|${username}|${filename}&quot;
+            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
+        }
+    }
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.startsWith(&quot;FILE_DATA&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1499381901">FILE_DATA</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - FileService Info" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.Socket
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.PrintWriter
+
+def gatewayHost = &quot;localhost&quot;
+def gatewayPort = 8081
+
+def makeTcpRequest = { host, port, request -&gt;
+    def socket = new Socket(host, port)
+    socket.setSoTimeout(10000)
+    try {
+        def out = new PrintWriter(socket.getOutputStream(), true)
+        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        
+        out.println(request)
+        def response = in.readLine()
+        
+        return response ?: &quot;&quot;
+    } finally {
+        socket.close()
+    }
+}
+
+try {
+    def request = &quot;fileservice|INFO&quot;
+    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
+    
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(response.contains(&quot;FileStorageService&quot;))
+    
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+    log.error(&quot;Request failed&quot;, e)
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1904189558">FileStorageService</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Sistema Chat Distribuído - UDP Key-Range Test">
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="File Storage System - UDP Test">
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
@@ -11,9 +11,9 @@
     </TestPlan>
     <hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
-        <intProp name="ThreadGroup.num_threads">50</intProp>
+        <intProp name="ThreadGroup.num_threads">200</intProp>
         <intProp name="ThreadGroup.ramp_time">5</intProp>
-        <longProp name="ThreadGroup.duration">30</longProp>
+        <longProp name="ThreadGroup.duration">60</longProp>
         <longProp name="ThreadGroup.delay">0</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
@@ -24,168 +24,415 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="UserService Status Check" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8183</stringProp>
-          <stringProp name="data">INFO</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - UserService Info" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+
+def request = &quot;userservice|INFO&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Service Response" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="-944811958">UserService</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - User Create Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+
+def request = &quot;userservice|CREATE|alice_${threadNum}|alice${threadNum}@test.com&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="UserService Create User Key A" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8183</stringProp>
-          <stringProp name="data">CREATE|user|alice|alice@example.com</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - User Create Key Z" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+
+def request = &quot;userservice|CREATE|zoe_${threadNum}|zoe${threadNum}@test.com&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="User Creation Response" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="1629169638">^(SUCCESS|REDIRECT).*</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">1</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="UserService Create User Key Z" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8193</stringProp>
-          <stringProp name="data">CREATE|user|zoe|zoe@example.com</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="User Creation Response" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="1629169638">^(SUCCESS|REDIRECT).*</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">1</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="MessageService Status Check" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8283</stringProp>
-          <stringProp name="data">INFO</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Service Response" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="MessageService Send Message Key A" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8283</stringProp>
-          <stringProp name="data">SEND|message|alice|Hello from A</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - File Store Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+def randomData = (new Random().nextInt(1000))
+
+def request = &quot;fileservice|STORE|alice_${threadNum}|document_A.txt|ContentFromUDPThread${threadNum}&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Message Sent Response" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="1629169638">^(SUCCESS|REDIRECT).*</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">1</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="MessageService Send Message Key Z" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8293</stringProp>
-          <stringProp name="data">SEND|message|zoe|Hello from Z</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Message Sent Response" enabled="true">
-            <collectionProp name="Asserion.test_strings">
-              <stringProp name="1629169638">^(SUCCESS|REDIRECT).*</stringProp>
-            </collectionProp>
-            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
-            <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">1</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
-          </ResponseAssertion>
-          <hashTree/>
-        </hashTree>
-        <kg.apc.jmeter.samplers.UDPSampler guiclass="kg.apc.jmeter.samplers.UDPSamplerGui" testclass="kg.apc.jmeter.samplers.UDPSampler" testname="MessageService Get Messages" enabled="true">
-          <stringProp name="hostname">localhost</stringProp>
-          <stringProp name="port">8283</stringProp>
-          <stringProp name="data">GET|messages</stringProp>
-          <boolProp name="waitresponse">true</boolProp>
-          <boolProp name="closechannel">false</boolProp>
-          <stringProp name="timeout">10000</stringProp>
-          <stringProp name="encodeclass">kg.apc.jmeter.samplers.PlainTextUDPDecoder</stringProp>
-          <stringProp name="bind_address"></stringProp>
-          <stringProp name="bind_port">0</stringProp>
-        </kg.apc.jmeter.samplers.UDPSampler>
-        <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Messages Retrieved" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="-1149187101">SUCCESS</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
-            <intProp name="Assertion.test_type">2</intProp>
+            <intProp name="Assertion.test_type">16</intProp>
             <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - File Store Key Z" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+def randomData = (new Random().nextInt(1000))
+
+def request = &quot;fileservice|STORE|zoe_${threadNum}|document_Z.txt|ContentFromUDPThread${threadNum}&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="-1149187101">SUCCESS</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - File Retrieve Key A" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+
+def request = &quot;fileservice|RETRIEVE|alice_${threadNum}|document_A.txt&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1499381901">FILE_DATA</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - File Retrieve Key Z" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+def threadNum = ctx.getThreadNum()
+
+def request = &quot;fileservice|RETRIEVE|zoe_${threadNum}|document_Z.txt&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1499381901">FILE_DATA</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="UDP - FileService Info" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+def host = &quot;localhost&quot;
+def port = 8082
+
+def request = &quot;fileservice|INFO&quot;
+def requestBytes = request.getBytes(&quot;UTF-8&quot;)
+
+def socket = new DatagramSocket()
+socket.setSoTimeout(5000)
+
+try {
+    def address = InetAddress.getByName(host)
+    def sendPacket = new DatagramPacket(requestBytes, requestBytes.length, address, port)
+    socket.send(sendPacket)
+    
+    def receiveBuffer = new byte[65507]
+    def receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length)
+    socket.receive(receivePacket)
+    
+    def response = new String(receivePacket.getData(), 0, receivePacket.getLength(), &quot;UTF-8&quot;)
+    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(true)
+} catch (Exception e) {
+    SampleResult.setResponseData(&quot;Error: &quot; + e.getMessage(), &quot;UTF-8&quot;)
+    SampleResult.setSuccessful(false)
+} finally {
+    socket.close()
+}
+</stringProp>
+        </JSR223Sampler>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1904189558">FileStorageService</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -222,7 +469,7 @@
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>

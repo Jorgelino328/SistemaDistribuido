@@ -1,2 +1,9 @@
 target/
 *.log
+
+# JMeter test results
+tests/results/
+*.jtl
+
+# VS Code
+.vscode/

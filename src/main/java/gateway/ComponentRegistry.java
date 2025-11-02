@@ -98,6 +98,7 @@ public class ComponentRegistry {
             
             if (!alreadyExists) {
                 components.add(componentInfo);
+                System.out.println("INFO: Novo componente registrado: " + componentInfo.getInstanceId());
             }
             
             if (components.size() == 1) {
@@ -138,7 +139,7 @@ public class ComponentRegistry {
             
             List<ComponentInfo> healthyComponents = new ArrayList<>();
             for (ComponentInfo component : components) {
-                if (component.isHealthy()) {
+                if (component.isHealthy() && !component.isSuspect()) {
                     healthyComponents.add(component);
                 }
             }

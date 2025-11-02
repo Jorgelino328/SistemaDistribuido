@@ -104,42 +104,69 @@ public class APIGateway {
     
 
     public byte[] routeRequest(String componentType, byte[] request, String protocol) {
-        List<ComponentInfo> availableComponents = registry.getAvailableComponents(componentType);
-        
-        if (availableComponents.isEmpty()) {
-            return "Nenhum componente disponível".getBytes();
-        }
-        
         String key = extractKeyFromRequest(new String(request));
-        ComponentInfo selected;
+        Set<String> triedComponents = new HashSet<>();
+        Exception lastException = null;
+        int maxAttempts = 10;
         
-        if (key != null) {
-            selected = registry.selectComponentByKey(componentType, key);
-        } else {
-            selected = registry.selectComponent(componentType);
-        }
-        
-        if (selected == null) {
-            return "Falha na seleção do componente".getBytes();
-        }
-        
-        
-        try {
-            switch (protocol.toLowerCase()) {
-                case "http":
-                    return httpHandler.forwardRequest(selected, request);
-                case "tcp":
-                    return tcpHandler.forwardRequest(selected, request);
-                case "udp":
-                    return udpHandler.forwardRequest(selected, request);
-                default:
-                    return "Protocolo não suportado".getBytes();
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            List<ComponentInfo> availableComponents = registry.getAvailableComponents(componentType);
+            
+            if (availableComponents.isEmpty()) {
+                if (lastException != null) {
+                    return ("Erro ao encaminhar requisição: " + lastException.getMessage()).getBytes();
+                } else {
+                    return "Nenhum componente disponível".getBytes();
+                }
             }
-        } catch (Exception e) {
             
-            registry.markComponentSuspect(selected);
+            ComponentInfo selected;
             
-            return ("Erro ao encaminhar requisição: " + e.getMessage()).getBytes();
+            if (key != null) {
+                selected = registry.selectComponentByKey(componentType, key);
+            } else {
+                selected = registry.selectComponent(componentType);
+            }
+            
+            if (selected == null) {
+                break;
+            }
+            
+            if (triedComponents.contains(selected.getInstanceId())) {
+                break;
+            }
+            
+            triedComponents.add(selected.getInstanceId());
+            
+            try {
+                byte[] response;
+                switch (protocol.toLowerCase()) {
+                    case "http":
+                        response = httpHandler.forwardRequest(selected, request);
+                        break;
+                    case "tcp":
+                        response = tcpHandler.forwardRequest(selected, request);
+                        break;
+                    case "udp":
+                        response = udpHandler.forwardRequest(selected, request);
+                        break;
+                    default:
+                        return "Protocolo não suportado".getBytes();
+                }
+                
+                return response;
+                
+            } catch (Exception e) {
+                registry.markComponentSuspect(selected);
+                lastException = e;
+                continue;
+            }
+        }
+        
+        if (lastException != null) {
+            return ("Erro ao encaminhar requisição: " + lastException.getMessage()).getBytes();
+        } else {
+            return "Falha na seleção do componente".getBytes();
         }
     }
     

@@ -60,16 +60,9 @@ public class FileStorageService extends BaseComponent {
                                 String username = pathParts[1];
                                 String filename = pathParts[2];
                                 String content = pathParts.length >= 4 ? pathParts[3] : "";
-                                String userKey = "file:" + username;
                                 
-                                if (isResponsibleFor(userKey)) {
-                                    storeFile(username, filename, content);
-                                    responseBody = "{\"status\":\"success\",\"message\":\"Arquivo armazenado: " + filename + "\"}";
-                                } else {
-                                    common.model.ComponentInfo responsibleNode = getResponsibleNode(userKey);
-                                    responseBody = "{\"status\":\"redirect\",\"node\":\"" + responsibleNode.getInstanceId() + 
-                                                  "\",\"host\":\"" + responsibleNode.getHost() + "\",\"port\":" + responsibleNode.getHttpPort() + "}";
-                                }
+                                storeFile(username, filename, content);
+                                responseBody = "{\"status\":\"success\",\"message\":\"Arquivo armazenado: " + filename + "\"}";
                             } else {
                                 responseBody = "{\"status\":\"error\",\"message\":\"Invalid format for STORE\"}";
                             }
@@ -79,19 +72,12 @@ public class FileStorageService extends BaseComponent {
                             if (pathParts.length >= 2) {
                                 String username = pathParts[1];
                                 String filename = pathParts.length >= 3 ? pathParts[2] : "";
-                                String userKey = "file:" + username;
                                 
-                                if (isResponsibleFor(userKey)) {
-                                    String content = retrieveFile(username, filename);
-                                    if (content != null) {
-                                        responseBody = "{\"status\":\"success\",\"content\":\"" + content + "\"}";
-                                    } else {
-                                        responseBody = "{\"status\":\"error\",\"message\":\"Arquivo não encontrado: " + filename + "\"}";
-                                    }
+                                String content = retrieveFile(username, filename);
+                                if (content != null) {
+                                    responseBody = "{\"status\":\"success\",\"content\":\"" + content + "\"}";
                                 } else {
-                                    common.model.ComponentInfo responsibleNode = getResponsibleNode(userKey);
-                                    responseBody = "{\"status\":\"redirect\",\"node\":\"" + responsibleNode.getInstanceId() + 
-                                                  "\",\"host\":\"" + responsibleNode.getHost() + "\",\"port\":" + responsibleNode.getHttpPort() + "}";
+                                    responseBody = "{\"status\":\"error\",\"message\":\"Arquivo não encontrado: " + filename + "\"}";
                                 }
                             } else {
                                 responseBody = "{\"status\":\"error\",\"message\":\"Username and filename required for RETRIEVE\"}";
@@ -144,21 +130,9 @@ public class FileStorageService extends BaseComponent {
                             String username = parts[1];
                             String filename = parts[2];
                             String content = parts[3];
-                            String userKey = "file:" + username;
                             
-                            if (isResponsibleFor(userKey)) {
-                                storeFile(username, filename, content);
-                                response = "SUCCESS|Arquivo armazenado: " + filename;
-                            } else {
-                                common.model.ComponentInfo responsibleNode = getResponsibleNode(userKey);
-                                if (responsibleNode != null) {
-                                response = "REDIRECT|" + responsibleNode.getInstanceId() + "|" +
-                                           responsibleNode.getHost() + "|" + responsibleNode.getHttpPort() + "|" +
-                                           "Arquivo deve ser armazenado no nó responsável";
-                                } else {
-                                    response = "ERROR|Nenhum nó responsável encontrado para usuário: " + username;
-                                }
-                            }
+                            storeFile(username, filename, content);
+                            response = "SUCCESS|Arquivo armazenado: " + filename;
                         } else {
                             response = "ERROR|Formato FILE_STORE inválido, esperado: FILE_STORE|username|filename|content";
                         }
@@ -168,24 +142,12 @@ public class FileStorageService extends BaseComponent {
                         if (parts.length >= 3) {
                             String username = parts[1];
                             String filename = parts[2];
-                            String userKey = "file:" + username;
                             
-                            if (isResponsibleFor(userKey)) {
-                                String content = retrieveFile(username, filename);
-                                if (content != null) {
-                                    response = "FILE_DATA|" + filename + "|" + content;
-                                } else {
-                                    response = "ERROR|Arquivo não encontrado: " + filename;
-                                }
+                            String content = retrieveFile(username, filename);
+                            if (content != null) {
+                                response = "FILE_DATA|" + filename + "|" + content;
                             } else {
-                                common.model.ComponentInfo responsibleNode = getResponsibleNode(userKey);
-                                if (responsibleNode != null) {
-                                response = "REDIRECT|" + responsibleNode.getInstanceId() + "|" +
-                                           responsibleNode.getHost() + "|" + responsibleNode.getHttpPort() + "|" +
-                                           "Arquivo deve ser recuperado do nó responsável";
-                                } else {
-                                    response = "ERROR|Nenhum nó responsável encontrado para usuário: " + username;
-                                }
+                                response = "ERROR|Arquivo não encontrado: " + filename;
                             }
                         } else {
                             response = "ERROR|Formato FILE_RETRIEVE inválido, esperado: FILE_RETRIEVE|username|filename";
@@ -226,14 +188,9 @@ public class FileStorageService extends BaseComponent {
                             String username = parts[1];
                             String filename = parts[2];
                             String content = parts[3];
-                            String userKey = "file:" + username;
                             
-                            if (isResponsibleFor(userKey)) {
-                                storeFile(username, filename, content);
-                                response = "SUCCESS|Arquivo armazenado: " + filename;
-                            } else {
-                                response = "REDIRECT|Not responsible for user: " + username;
-                            }
+                            storeFile(username, filename, content);
+                            response = "SUCCESS|Arquivo armazenado: " + filename;
                         } else {
                             response = "ERROR|STORE requires: STORE|username|filename|content";
                         }
@@ -242,14 +199,9 @@ public class FileStorageService extends BaseComponent {
                         if (parts.length >= 3) {
                             String username = parts[1];
                             String filename = parts[2];
-                            String userKey = "file:" + username;
                             
-                            if (isResponsibleFor(userKey)) {
-                                String content = retrieveFile(username, filename);
-                                response = content != null ? "FILE_DATA|" + filename + "|" + content : "ERROR|Arquivo não encontrado: " + filename;
-                            } else {
-                                response = "REDIRECT|Not responsible for user: " + username;
-                            }
+                            String content = retrieveFile(username, filename);
+                            response = content != null ? "FILE_DATA|" + filename + "|" + content : "ERROR|Arquivo não encontrado: " + filename;
                         } else {
                             response = "ERROR|RETRIEVE requires: RETRIEVE|username|filename";
                         }

@@ -6,11 +6,14 @@ import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 
 public class KeyRangePartition {
+    private static final Logger LOGGER = Logger.getLogger(KeyRangePartition.class.getName());
     private final String nodeId;
     private final String componentType;
     private final String gatewayHost;
@@ -211,6 +214,7 @@ public class KeyRangePartition {
                 }
             }
         } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Falha ao descobrir nós do gateway", e);
         }
     }
     

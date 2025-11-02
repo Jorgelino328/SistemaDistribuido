@@ -10,7 +10,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,18 +21,12 @@ public class UserService extends BaseComponent {
     
 
     private final Map<String, String> userStore = new ConcurrentHashMap<>();
-
-
-    private final String instanceId;
     
 
     public UserService(String host, int httpPort, int tcpPort, int udpPort,
                       String gatewayHost, int gatewayRegistrationPort) {
         super("userservice", host, httpPort, tcpPort, udpPort, 
               gatewayHost, gatewayRegistrationPort);
-        
-
-        this.instanceId = UUID.randomUUID().toString().substring(0, 8);
         
 
         userStore.put("user:admin", "{\"username\":\"admin\",\"email\":\"admin@system.com\",\"role\":\"admin\",\"status\":\"online\"}");

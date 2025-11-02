@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="File Storage System - TCP Test">
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="TCP Test - Native Samplers">
+      <stringProp name="TestPlan.comments">Simplified TCP tests using native TCP sampler without JSR223</stringProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
         <collectionProp name="Arguments.arguments"/>
       </elementProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
@@ -23,122 +22,46 @@
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - UserService Info" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    def request = &quot;userservice|INFO&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.contains(&quot;UserService&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - UserService Info" enabled="true">
+          <stringProp name="TCPSampler.classname">org.apache.jmeter.protocol.tcp.sampler.TCPClientImpl</stringProp>
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.ctimeout">5000</stringProp>
+          <stringProp name="TCPSampler.request">userservice|INFO
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="-944811958">UserService</stringProp>
             </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">16</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - User Create Key A" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;alice_${threadNum}&quot;
-def email = &quot;alice${threadNum}@test.com&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;userservice|USER_CREATE|${username}|${email}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;USER_CREATE|${username}|${email}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - User Create Key A" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">userservice|USER_CREATE|alice|alice@test.com
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -151,67 +74,19 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - User Create Key Z" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;zoe_${threadNum}&quot;
-def email = &quot;zoe${threadNum}@test.com&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;userservice|USER_CREATE|${username}|${email}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;USER_CREATE|${username}|${email}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - User Create Key Z" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">userservice|USER_CREATE|zoe|zoe@test.com
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -224,68 +99,19 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Store Key A" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;alice_${threadNum}&quot;
-def filename = &quot;document_A.txt&quot;
-def content = &quot;ContentFromTCPThread${threadNum}&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;fileservice|FILE_STORE|${username}|${filename}|${content}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;FILE_STORE|${username}|${filename}|${content}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - File Store Key A" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">fileservice|FILE_STORE|alice|document_A.txt|TestContentA
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -298,68 +124,19 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Store Key Z" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;zoe_${threadNum}&quot;
-def filename = &quot;document_Z.txt&quot;
-def content = &quot;ContentFromTCPThread${threadNum}&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;fileservice|FILE_STORE|${username}|${filename}|${content}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;FILE_STORE|${username}|${filename}|${content}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;SUCCESS&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - File Store Key Z" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">fileservice|FILE_STORE|zoe|document_Z.txt|TestContentZ
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -372,67 +149,19 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Retrieve Key A" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;alice_${threadNum}&quot;
-def filename = &quot;document_A.txt&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;fileservice|FILE_RETRIEVE|${username}|${filename}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;FILE_RETRIEVE|${username}|${filename}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;FILE_DATA&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - File Retrieve Key A" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">fileservice|FILE_RETRIEVE|alice|document_A.txt
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -445,67 +174,19 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - File Retrieve Key Z" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-def threadNum = ctx.getThreadNum()
-def username = &quot;zoe_${threadNum}&quot;
-def filename = &quot;document_Z.txt&quot;
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    // First attempt - to gateway
-    def request = &quot;fileservice|FILE_RETRIEVE|${username}|${filename}&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    // Check if redirect
-    if (response.startsWith(&quot;REDIRECT|&quot;)) {
-        def parts = response.split(/\|/)
-        if (parts.length &gt;= 4) {
-            def redirectHost = parts[2]
-            def httpPort = parts[3] as Integer
-            def tcpPort = httpPort + 1
-            log.info(&quot;Redirect detected to ${redirectHost}:${tcpPort}&quot;)
-            
-            def directRequest = &quot;FILE_RETRIEVE|${username}|${filename}&quot;
-            response = makeTcpRequest(redirectHost, tcpPort, directRequest)
-        }
-    }
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.startsWith(&quot;FILE_DATA&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - File Retrieve Key Z" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">fileservice|FILE_RETRIEVE|zoe|document_Z.txt
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
@@ -518,308 +199,278 @@ try {
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="TCP - FileService Info" enabled="true">
-          <stringProp name="scriptLanguage">groovy</stringProp>
-          <stringProp name="parameters"></stringProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">import java.net.Socket
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
-
-def gatewayHost = &quot;localhost&quot;
-def gatewayPort = 8081
-
-def makeTcpRequest = { host, port, request -&gt;
-    def socket = new Socket(host, port)
-    socket.setSoTimeout(10000)
-    try {
-        def out = new PrintWriter(socket.getOutputStream(), true)
-        def in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        
-        out.println(request)
-        def response = in.readLine()
-        
-        return response ?: &quot;&quot;
-    } finally {
-        socket.close()
-    }
-}
-
-try {
-    def request = &quot;fileservice|INFO&quot;
-    def response = makeTcpRequest(gatewayHost, gatewayPort, request)
-    
-    SampleResult.setResponseData(response, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(response.contains(&quot;FileStorageService&quot;))
-    
-} catch (Exception e) {
-    SampleResult.setResponseData(&quot;Error: ${e.message}&quot;, &quot;UTF-8&quot;)
-    SampleResult.setSuccessful(false)
-    log.error(&quot;Request failed&quot;, e)
-}
+        <TCPSampler guiclass="TCPSamplerGui" testclass="TCPSampler" testname="TCP - FileService Info" enabled="true">
+          <stringProp name="TCPSampler.server">localhost</stringProp>
+          <boolProp name="TCPSampler.reUseConnection">false</boolProp>
+          <stringProp name="TCPSampler.port">8081</stringProp>
+          <boolProp name="TCPSampler.nodelay">false</boolProp>
+          <stringProp name="TCPSampler.timeout">10000</stringProp>
+          <stringProp name="TCPSampler.request">fileservice|INFO
 </stringProp>
-        </JSR223Sampler>
+          <boolProp name="TCPSampler.closeConnection">true</boolProp>
+          <stringProp name="TCPSampler.EolByte">10</stringProp>
+          <stringProp name="ConfigTestElement.username"></stringProp>
+          <stringProp name="ConfigTestElement.password"></stringProp>
+        </TCPSampler>
         <hashTree>
           <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="1904189558">FileStorageService</stringProp>
             </collectionProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
             <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">16</intProp>
-            <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-        </ResultCollector>
-        <hashTree/>
-        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-        </ResultCollector>
-        <hashTree/>
-        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-        </ResultCollector>
-        <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="true">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-          <longProp name="interval_grouping">500</longProp>
-          <boolProp name="graph_aggregated">false</boolProp>
-          <stringProp name="include_sample_labels"></stringProp>
-          <stringProp name="exclude_sample_labels"></stringProp>
-          <stringProp name="start_offset"></stringProp>
-          <stringProp name="end_offset"></stringProp>
-          <boolProp name="include_checkbox_state">false</boolProp>
-          <boolProp name="exclude_checkbox_state">false</boolProp>
-        </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
-        <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-          <longProp name="interval_grouping">500</longProp>
-          <boolProp name="graph_aggregated">false</boolProp>
-          <stringProp name="include_sample_labels"></stringProp>
-          <stringProp name="exclude_sample_labels"></stringProp>
-          <stringProp name="start_offset"></stringProp>
-          <stringProp name="end_offset"></stringProp>
-          <boolProp name="include_checkbox_state">false</boolProp>
-          <boolProp name="exclude_checkbox_state">false</boolProp>
-        </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
-        <hashTree/>
-        <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.TransactionsPerSecondGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Transactions per Second">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-          <longProp name="interval_grouping">1000</longProp>
-          <boolProp name="graph_aggregated">false</boolProp>
-          <stringProp name="include_sample_labels"></stringProp>
-          <stringProp name="exclude_sample_labels"></stringProp>
-          <stringProp name="start_offset"></stringProp>
-          <stringProp name="end_offset"></stringProp>
-          <boolProp name="include_checkbox_state">false</boolProp>
-          <boolProp name="exclude_checkbox_state">false</boolProp>
-        </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
-        <hashTree/>
       </hashTree>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ThreadsStateOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Active Threads Over Time" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+        <longProp name="interval_grouping">500</longProp>
+        <boolProp name="graph_aggregated">false</boolProp>
+        <stringProp name="include_sample_labels"></stringProp>
+        <stringProp name="exclude_sample_labels"></stringProp>
+        <stringProp name="start_offset"></stringProp>
+        <stringProp name="end_offset"></stringProp>
+        <boolProp name="include_checkbox_state">false</boolProp>
+        <boolProp name="exclude_checkbox_state">false</boolProp>
+      </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
+      <hashTree/>
+      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.ResponseTimesOverTimeGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Response Times Over Time" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+        <longProp name="interval_grouping">500</longProp>
+        <boolProp name="graph_aggregated">false</boolProp>
+        <stringProp name="include_sample_labels"></stringProp>
+        <stringProp name="exclude_sample_labels"></stringProp>
+        <stringProp name="start_offset"></stringProp>
+        <stringProp name="end_offset"></stringProp>
+        <boolProp name="include_checkbox_state">false</boolProp>
+        <boolProp name="exclude_checkbox_state">false</boolProp>
+      </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
+      <hashTree/>
+      <kg.apc.jmeter.vizualizers.CorrectedResultCollector guiclass="kg.apc.jmeter.vizualizers.TransactionsPerSecondGui" testclass="kg.apc.jmeter.vizualizers.CorrectedResultCollector" testname="jp@gc - Transactions per Second" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+        <longProp name="interval_grouping">1000</longProp>
+        <boolProp name="graph_aggregated">false</boolProp>
+        <stringProp name="include_sample_labels"></stringProp>
+        <stringProp name="exclude_sample_labels"></stringProp>
+        <stringProp name="start_offset"></stringProp>
+        <stringProp name="end_offset"></stringProp>
+        <boolProp name="include_checkbox_state">false</boolProp>
+        <boolProp name="exclude_checkbox_state">false</boolProp>
+      </kg.apc.jmeter.vizualizers.CorrectedResultCollector>
+      <hashTree/>
     </hashTree>
   </hashTree>
 </jmeterTestPlan>

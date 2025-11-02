@@ -120,6 +120,11 @@ public class APIGateway {
                 }
             }
             
+            // Se já tentamos todos os componentes disponíveis, parar
+            if (triedComponents.size() >= availableComponents.size()) {
+                break;
+            }
+            
             ComponentInfo selected;
             
             if (key != null) {
@@ -132,8 +137,9 @@ public class APIGateway {
                 break;
             }
             
+            // Se já tentamos este componente, tentar próximo
             if (triedComponents.contains(selected.getInstanceId())) {
-                break;
+                continue;
             }
             
             triedComponents.add(selected.getInstanceId());

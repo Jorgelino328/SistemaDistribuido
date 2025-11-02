@@ -5,9 +5,12 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import common.pattern.KeyRangePartition;
 
 public class FileStorageService extends BaseComponent {
+    private static final Logger LOGGER = Logger.getLogger(FileStorageService.class.getName());
     private final Map<String, Map<String, String>> userFiles = new ConcurrentHashMap<>();
     
     public FileStorageService(String host, int httpPort, int tcpPort, int udpPort,
@@ -108,7 +111,9 @@ public class FileStorageService extends BaseComponent {
             
             output.write(httpResponse.getBytes());
             output.flush();
-        } catch (IOException e) {}
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "CRÍTICO: Falha ao enviar resposta HTTP", e);
+        }
     }
     
     @Override
@@ -164,7 +169,9 @@ public class FileStorageService extends BaseComponent {
                 
                 writer.println(response);
             }
-        } catch (IOException e) {}
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "CRÍTICO: Falha ao processar requisição TCP", e);
+        }
     }
     
     @Override
@@ -218,7 +225,9 @@ public class FileStorageService extends BaseComponent {
                 responseData, responseData.length, clientAddress, clientPort
             );
             udpServer.send(responsePacket);
-        } catch (IOException e) {}
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "CRÍTICO: Falha ao processar requisição UDP", e);
+        }
     }
     
     private void storeFile(String username, String filename, String content) {

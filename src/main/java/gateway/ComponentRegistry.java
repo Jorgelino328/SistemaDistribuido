@@ -171,7 +171,8 @@ public class ComponentRegistry {
     }
     
     public ComponentInfo selectComponentByKey(String componentType, String key) {
-        lock.writeLock().lock();
+        // Primeiro tentar encontrar componente responsável com read lock
+        lock.readLock().lock();
         try {
             List<ComponentInfo> components = getAvailableComponents(componentType);
             
@@ -183,6 +184,18 @@ public class ComponentRegistry {
                 if (component.isResponsibleForKey(key)) {
                     return component;
                 }
+            }
+        } finally {
+            lock.readLock().unlock();
+        }
+        
+        // Se não encontrou componente responsável, usar round-robin com write lock
+        lock.writeLock().lock();
+        try {
+            List<ComponentInfo> components = getAvailableComponents(componentType);
+            
+            if (components.isEmpty()) {
+                return null;
             }
             
             int lastIndex = lastUsedIndexByType.getOrDefault(componentType, -1);

@@ -21,7 +21,6 @@ public class HeartbeatMonitor {
     private final ScheduledExecutorService scheduler;
     private final int heartbeatInterval; // em segundos
     private final int timeoutThreshold; // em segundos
-    private DatagramSocket udpSocket;
     
     public HeartbeatMonitor(ComponentRegistry registry, int heartbeatInterval, int timeoutThreshold) {
         this.registry = registry;
@@ -32,9 +31,6 @@ public class HeartbeatMonitor {
 
     public void start() {
         try {
-            udpSocket = new DatagramSocket();
-            
-
             scheduler.scheduleAtFixedRate(this::sendHeartbeats, 0, heartbeatInterval, TimeUnit.SECONDS);
             
 
@@ -49,9 +45,6 @@ public class HeartbeatMonitor {
     public void stop() {
         if (scheduler != null) {
             scheduler.shutdown();
-        }
-        if (udpSocket != null && !udpSocket.isClosed()) {
-            udpSocket.close();
         }
         LOGGER.info("HeartbeatMonitor parado");
     }
@@ -72,35 +65,38 @@ public class HeartbeatMonitor {
     
 
     private void sendHeartbeatToComponent(ComponentInfo component) throws Exception {
-        String heartbeatMessage = "HEARTBEAT";
-        byte[] data = heartbeatMessage.getBytes(StandardCharsets.UTF_8);
-        
-        InetAddress address = InetAddress.getByName(component.getHost());
-        DatagramPacket packet = new DatagramPacket(
-            data, data.length, address, component.getUdpPort()
-        );
-        
-        udpSocket.send(packet);
-        
-
-        byte[] responseBuffer = new byte[1024];
-        DatagramPacket responsePacket = new DatagramPacket(responseBuffer, responseBuffer.length);
-        
-        udpSocket.setSoTimeout(2000); // 2 segundos timeout
-        
-        try {
-            udpSocket.receive(responsePacket);
-            String response = new String(responsePacket.getData(), 0, responsePacket.getLength(), StandardCharsets.UTF_8);
+        // Criar novo socket para cada heartbeat evita race conditions
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setSoTimeout(2000); // 2 segundos timeout
             
-            if ("HEARTBEAT_ACK".equals(response.trim())) {
-                component.updateHeartbeat();
-                component.markHealthy();
-            } else {
+            String heartbeatMessage = "HEARTBEAT";
+            byte[] data = heartbeatMessage.getBytes(StandardCharsets.UTF_8);
+            
+            InetAddress address = InetAddress.getByName(component.getHost());
+            DatagramPacket packet = new DatagramPacket(
+                data, data.length, address, component.getUdpPort()
+            );
+            
+            socket.send(packet);
+            
+
+            byte[] responseBuffer = new byte[1024];
+            DatagramPacket responsePacket = new DatagramPacket(responseBuffer, responseBuffer.length);
+            
+            try {
+                socket.receive(responsePacket);
+                String response = new String(responsePacket.getData(), 0, responsePacket.getLength(), StandardCharsets.UTF_8);
+                
+                if ("HEARTBEAT_ACK".equals(response.trim())) {
+                    component.updateHeartbeat();
+                    component.markHealthy();
+                } else {
+                    component.markSuspect();
+                }
+            } catch (Exception e) {
+
                 component.markSuspect();
             }
-        } catch (Exception e) {
-
-            component.markSuspect();
         }
     }
     

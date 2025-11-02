@@ -86,11 +86,12 @@ public class TCPHandler {
 
     private void handleRequest(Socket clientSocket) {
         try (
-            OutputStream output = clientSocket.getOutputStream()
+            Socket socket = clientSocket;
+            InputStream in = socket.getInputStream();
+            OutputStream output = socket.getOutputStream()
         ) {
-            // Be tolerant to clients that don't send a trailing EOL; read until LF or EOF
-            clientSocket.setSoTimeout(10000);
-            InputStream in = clientSocket.getInputStream();
+            socket.setSoTimeout(10000);
+            
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             int b;
             while ((b = in.read()) != -1) {
@@ -109,7 +110,6 @@ public class TCPHandler {
 
                     byte[] response = gateway.routeRequest(componentType, actualRequest.getBytes(), "tcp");
 
-                    // Ensure exactly one trailing newline for TCP clients that expect EOL (e.g., JMeter EolByte=10)
                     if (response == null || response.length == 0) {
                         output.write('\n');
                     } else if (response[response.length - 1] == (byte) '\n') {
@@ -124,18 +124,9 @@ public class TCPHandler {
                     output.write(err.getBytes());
                     output.flush();
                 }
-            } else {
-                // No data received before EOF/timeout; return a newline to avoid client hangs
-                output.write('\n');
-                output.flush();
             }
+            
         } catch (IOException e) {
-            // swallow to keep handler resilient
-        } finally {
-            try {
-                clientSocket.close();
-            } catch (IOException e) {
-            }
         }
     }
     
@@ -152,11 +143,9 @@ public class TCPHandler {
 
             String response = in.readLine();
             if (response == null) {
-                // Ensure caller will not hang waiting for EOL
                 return "Sem resposta\n".getBytes();
             }
 
-            // Ensure we return exactly one trailing newline (EOL) for the caller
             if (response.endsWith("\n")) {
                 return response.getBytes();
             } else {
